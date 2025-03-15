@@ -22,9 +22,7 @@
 
 ;;; Code:
 ;;
-(require 's)
 (require 'json)
-(require 'dash)
 (eval-when-compile
   (if (version< emacs-version "26")
       (require 'cl)
@@ -42,6 +40,18 @@
 (defconst grpclient-comment-start-regexp (concat "^" grpclient-comment-separator))
 (defconst grpclient-comment-not-regexp (concat "^[^" grpclient-comment-separator "]"))
 (defconst grpclient-empty-line-regexp "^\\s-*$")
+
+;;stolen from 's beautiful library https://github.com/magnars/s.el
+(defun grpclient--replace-all (replacements s)
+  "REPLACEMENTS is a list of cons-cells. Each `car` is replaced with `cdr` in S."
+  (let ((case-fold-search nil))
+   (replace-regexp-in-string (regexp-opt (mapcar 'car replacements))
+                             (lambda (it) (cdr (assoc-string it replacements)))
+                             s t t)))
+
+(defun grpclient--non-nil (list)
+  "Return a copy of LIST with all nil items removed."
+  (seq-filter 'identity list))
 
 
 (defun grpclient--trim-to-nil (str)
@@ -63,8 +73,7 @@
 
 (defun grpclient--current-max ()
   (save-excursion
-    (if (or (re-search-forward grpclient-comment-start-regexp (point-max) t)
-            (re-search-forward grpclient-entities-separator (point-max) t))
+    (if (re-search-forward grpclient-comment-start-regexp (point-max) t)
         (max (- (point-at-bol) 1) 1)
       (progn (goto-char (point-max))
              (if (looking-at "^$") (- (point) 1) (point))))))
@@ -96,9 +105,9 @@
          (or
           (search-forward-regexp (concat ">>") bound t)
           (grpclient--current-max)))
-        (s-replace-regexp (concat grpclient-comment-start-regexp ".+$") "")
-        (s-replace-regexp grpclient-flags-block-end-regexp "")
-        (s-replace-regexp "[ \r\t\n]+" " ")
+        (replace-regexp-in-string (concat grpclient-comment-start-regexp ".+$") "")
+        (replace-regexp-in-string grpclient-flags-block-end-regexp "")
+        (replace-regexp-in-string "[ \r\t\n]+" " ")
         (grpclient--trim-to-nil)))))
 
 
@@ -106,21 +115,21 @@
   (save-excursion
     (goto-char (grpclient--current-min))
     (let* ((url-proto-method (cdr (string-split (grpclient--current-line) " ")))
-           (url (first url-proto-method))
+           (url (cl-first url-proto-method))
            (vars (grpclient--collect-vars-before))
-           (method (second url-proto-method))
-           (proto (third url-proto-method))
+           (method (cl-second url-proto-method))
+           (proto (cl-third url-proto-method))
            (cmax (grpclient--current-max))
            (flags (grpclient--find-flags (grpclient--current-min)))
            (body (string-trim (buffer-substring-no-properties (min (point) cmax) cmax)))
            (cmd-builder (list "grpcurl"
-                              (when body (concat "-d '" (encode-coding-string (s-replace-all vars body) 'utf-8) "'"))
+                              (when body (concat "-d '" (encode-coding-string (grpclient--replace-all vars body) 'utf-8) "'"))
                               (string-join grpclient-default-flags " ")
-                              (when flags (s-replace-all vars flags))
-                              (when proto (concat "-proto " (s-replace-all vars proto)))
-                              (s-replace-all vars url)
-                              (if method (s-replace-all vars method) ""))))
-      (string-join (-non-nil cmd-builder) " "))))
+                              (when flags (grpclient--replace-all vars flags))
+                              (when proto (concat "-proto " (grpclient--replace-all vars proto)))
+                              (grpclient--replace-all vars url)
+                              (if method (grpclient--replace-all vars method) ""))))
+      (string-join (grpclient--non-nil cmd-builder) " "))))
 
 
 (defun grpclient-pretty-current ()
@@ -201,9 +210,9 @@ To exactly ensure what command is built call method
                    url
                    "describe"
                    message))
-         (cmd (string-join (-non-nil builder) " ")))
+         (cmd (string-join (grpclient--non-nil builder) " ")))
     (async-shell-command cmd
-                         (string-join (-non-nil (list "*GRPC" message "Description*")) " ")
+                         (string-join (grpclient--non-nil (list "*GRPC" message "Description*")) " ")
                          "*GRPC Error*")))
 
 
