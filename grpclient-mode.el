@@ -60,7 +60,9 @@
          '(3 'grpclient-proto-face))
    (list "\\(^:[^\s\n]+\\)=\\([^\s\n]+\\)$"
          '(1 'grpclient-var-name-face)
-         '(2 'grpclient-var-value-face)))
+         '(2 'grpclient-var-value-face))
+   (list "^\\(>>\\)"
+         '(1 'grpclient-var-value-face)))
   "Minimal highlighting grpclient entities.")
 
 

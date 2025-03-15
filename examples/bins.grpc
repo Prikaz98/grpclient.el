@@ -1,18 +1,30 @@
 # -*- grpclient -*-
-:path=~/path/to/proto
 
+#This is a vars that you can use in your queries
+:path=.
+:address=grpcb.in:9000
+
+#This is special var that describes flags which will be added in all following queries
 :flags=<<
 #-vv
--connect-timeout 1
+-connect-timeout 10
 -emit-defaults
 -expand-headers
--import-path :path
-#-max-msg-sz 400
+#-import-path :path
+-max-msg-sz 1900
 >>
 
-#This query to need to say hello
-GRPC grpcb.in:9000 hello.HelloService.SayHello :path/file.proto
-{}
+# This is description of the query.
+# Put cursor in the GRPC word and call 'grpclient-copy-grpcurl-to-clipboard' by (C-c C-u)
+#
+#  grpcurl -d '{"greeting":"John"}' -plaintext -connect-timeout 1 -emit-defaults -expand-headers -max-msg-sz 1900 -proto ./hello.proto grpcb.in:9000 hello.HelloService.SayHello
+#
+#  To execute the command instantly call 'grpclient-send-current' by (C-c C-v)
+#    in new buffer should appear a result of the command execution.
+#
+#  You can play with flags below to get different output.
+GRPC :address hello.HelloService.SayHello :path/hello.proto
+{"greeting":"John"}
 
 #This query return a stream of entity that we send
 GRPC grpcb.in:9000 grpcbin.GRPCBin.DummyServerStream

@@ -42,7 +42,6 @@
 (defconst grpclient-comment-start-regexp (concat "^" grpclient-comment-separator))
 (defconst grpclient-comment-not-regexp (concat "^[^" grpclient-comment-separator "]"))
 (defconst grpclient-empty-line-regexp "^\\s-*$")
-(defconst grpclient-entities-separator "^$")
 
 
 (defun grpclient--trim-to-nil (str)
@@ -55,13 +54,9 @@
   (save-excursion
     (beginning-of-line)
     (if (looking-at grpclient-comment-start-regexp)
-        (if (or
-             (re-search-forward grpclient-comment-not-regexp (point-max) t)
-             (re-search-forward grpclient-entities-separator (point-max) t))
+        (if (re-search-forward grpclient-comment-not-regexp (point-max) t)
             (point-at-bol) (point-max))
-      (if (or
-           (re-search-backward grpclient-comment-start-regexp (point-min) t)
-           (re-search-backward grpclient-entities-separator (point-min) t))
+      (if (re-search-backward grpclient-comment-start-regexp (point-min) t)
           (point-at-bol 2)
         (point-min)))))
 
@@ -119,7 +114,7 @@
            (flags (grpclient--find-flags (grpclient--current-min)))
            (body (string-trim (buffer-substring-no-properties (min (point) cmax) cmax)))
            (cmd-builder (list "grpcurl"
-                              (when body (concat "-d '" (s-replace-all vars body) "'"))
+                              (when body (concat "-d '" (encode-coding-string (s-replace-all vars body) 'utf-8) "'"))
                               (string-join grpclient-default-flags " ")
                               (when flags (s-replace-all vars flags))
                               (when proto (concat "-proto " (s-replace-all vars proto)))
@@ -179,8 +174,8 @@ Entity format:
 GRPC host:port path.Service.Method
 {}
 #
-- Use # or empty lines to set bound of the entity
-- GRPC is an anchor of the query
+- Use # to set bound of the entity
+- GRPC is an anchor word of the query
 - {} is an body of the query.
 
 To exactly ensure what command is built call method

@@ -1,0 +1,14 @@
+package hello;
+
+message HelloRequest {
+  optional string greeting = 1;
+}
+
+message HelloResponse {
+  required string reply = 1;
+}
+
+
+service HelloService {
+  rpc SayHello(HelloRequest) returns (HelloResponse);
+}
