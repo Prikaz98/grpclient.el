@@ -1,9 +1,9 @@
 #+title: GRPClient
 
-[[https://github.com/fullstorydev/grpcurl][grpcurl]] query builder from plain-text sheets havily inspired by [[https://github.com/pashky/restclient.el][restclient.el]]
+[[https://github.com/fullstorydev/grpcurl][gRPCurl]] query builder from plain-text sheets havily inspired by [[https://github.com/pashky/restclient.el][restclient.el]]
 
 * Install
-1. Install [[https://github.com/fullstorydev/grpcurl][grpcurl]]
+1. Install [[https://github.com/fullstorydev/grpcurl][gRPCurl]]
 2. Clone repository to your local directory
 3. Add following configuration in your ~init.el~ or ~.emacs~ file
 #+begin_src emacs-lisp
