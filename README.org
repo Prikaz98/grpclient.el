@@ -1,0 +1,21 @@
+#+title: GRPClient
+
+[[https://github.com/fullstorydev/grpcurl][grpcurl]] query builder from plain-text sheets havily inspired by [[https://github.com/pashky/restclient.el][restclient.el]]
+
+* Install
+1. Clone repository to your local directory
+2. Add following configuration in your init.el or .emacs file
+#+begin_src emacs-lisp
+(use-package grpclient
+  :ensure nil
+  :load-path "~/path/to/grpclient.el/"
+  :init
+  (add-to-list 'auto-mode-alist '("\\.grpc\\'" . grpclient-mode)))
+#+end_src
+
+* Key-map
+| kdb     | function                            |
+|---------+-------------------------------------|
+| C-c C-v | grpclient-send-current              |
+| C-c C-u | grpclient-copy-grpcurl-to-clipboard |
+| <tab>   | grpclient-toggle-pretty-body        |

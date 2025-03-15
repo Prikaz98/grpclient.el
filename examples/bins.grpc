@@ -1,0 +1,23 @@
+# -*- grpclient -*-
+:path=~/path/to/proto
+
+:flags=<<
+#-vv
+-connect-timeout 1
+-emit-defaults
+-expand-headers
+-import-path :path
+#-max-msg-sz 400
+>>
+
+#This query to need to say hello
+GRPC grpcb.in:9000 hello.HelloService.SayHello :path/file.proto
+{}
+
+#This query return a stream of entity that we send
+GRPC grpcb.in:9000 grpcbin.GRPCBin.DummyServerStream
+{"fString":"","fStrings":["hello"],"fInt32":0,"fInt32s":[0],"fEnum":"ENUM_0","fEnums":["ENUM_0"],"fSub":{"fString":""},"fSubs":[{"fString":""}],"fBool":false,"fBools":[false],"fInt64":"0","fInt64s":["0"],"fBytes":"","fBytess":[""],"fFloat":0,"fFloats":[0]}
+
+#Concatenates two strings (max size: 10 chars)
+GRPC grpcb.in:9000 addsvc.Add.Concat
+{"a":"Hello","b":" Wrld"}
