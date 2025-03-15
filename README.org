@@ -24,3 +24,5 @@
 
 * Screenshot
 [[file:examples/grpclient-el.png]]
+* Demo
+[[file:examples/grpclient-el.gif]]
