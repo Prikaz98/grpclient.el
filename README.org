@@ -14,6 +14,17 @@
   (add-to-list 'auto-mode-alist '("\\.grpc\\'" . grpclient-mode)))
 #+end_src
 4. Check [[file:examples/bins.grpc][example file]]
+* Running the Example gRPC Server
+To test the Emacs mode, you can start a local Python gRPC server serving both Proto2 and Proto3 examples.
+
+The easiest way to start the server is to use the provided shell script. It will automatically create a virtual environment, install dependencies, compile the Protocol Buffers, and start the server.
+
+#+begin_src bash
+./examples/start_server.sh
+#+end_src
+
+The server will start on port =9000= with gRPC reflection enabled, making it easy to query using =grpcurl= and =grpclient-mode=.
+
 * Key-map
 | kdb     | function                            |
 |---------+-------------------------------------|
