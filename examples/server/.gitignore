@@ -1,6 +1,6 @@
 # Python virtual environment
-../venv/
-venv/
+../.venv/
+.venv/
 
 # Generated Python gRPC files
 *_pb2.py

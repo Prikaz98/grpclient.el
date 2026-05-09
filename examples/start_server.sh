@@ -5,8 +5,8 @@ set -e
 cd "$(dirname "$0")"
 
 echo "Setting up virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 
 echo "Installing dependencies..."
 pip install -r server/requirements.txt --quiet
