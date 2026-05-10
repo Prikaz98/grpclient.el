@@ -1,4 +1,4 @@
-# -*- grpclient -*-
+# -*- mode: grpclient -*-
 
 #This is a vars that you can use in your queries
 :path=.

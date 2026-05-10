@@ -190,9 +190,9 @@ GRPC host:port path.Service.Method
 To exactly ensure what command is built call method
 `(grpclient-copy-grpcurl-to-clipboard)`"
   (interactive)
-  (let* ((cmd (grpclient--build-command))
-         (buf (get-buffer-create "*GRPC Response*"))
-         (err (get-buffer-create "*GRPC Error*")))
+  (let ((cmd (grpclient--build-command))
+        (buf (get-buffer-create "*GRPC Response*"))
+        (err (get-buffer-create "*GRPC Error*")))
     (with-current-buffer buf
       (if (fboundp 'json-mode) (json-mode) (js-mode))
       (erase-buffer))
@@ -201,10 +201,12 @@ To exactly ensure what command is built call method
     (set-process-sentinel
      (make-process :name "grpcurl" :buffer buf :stderr err
                    :command (list shell-file-name shell-command-switch cmd))
-     (lambda (p _)
-       (when (and (memq (process-status p) '(exit signal))
-                  (buffer-live-p (process-buffer p)))
-         (with-current-buffer (process-buffer p)
+     (lambda (process _)
+       (when (and (memq (process-status process) '(exit signal))
+                  (buffer-live-p (process-buffer process)))
+         (when (> (process-exit-status process) 0)
+           (display-buffer err))
+         (with-current-buffer (process-buffer process)
            (goto-char (point-min))
            (when-let ((win (get-buffer-window (current-buffer))))
              (set-window-point win (point-min)))))))))
