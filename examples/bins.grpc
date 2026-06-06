@@ -6,7 +6,7 @@
 
 #This is special var that describes flags which will be added in all following queries
 :flags=<<
-#-vv
+-vv
 -connect-timeout 10
 -emit-defaults
 -expand-headers
@@ -24,6 +24,7 @@
 #
 #  You can play with flags below to get different output.
 GRPC :address hello.HelloService.SayHello :path/hello.proto
+-> (cdr (assq 'reply (json-read)))
 {"greeting":"John"}
 
 #This query return a stream of entity that we send
@@ -32,4 +33,5 @@ GRPC grpcb.in:9000 grpcbin.GRPCBin.DummyServerStream
 
 #Concatenates two strings (max size: 10 chars)
 GRPC grpcb.in:9000 addsvc.Add.Concat
+-> (json-read)
 {"a":"Hello","b":" Wrld"}

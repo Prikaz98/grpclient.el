@@ -49,6 +49,7 @@
                              (lambda (it) (cdr (assoc-string it replacements)))
                              s t t)))
 
+
 (defun grpclient--non-nil (list)
   "Return a copy of LIST with all nil items removed."
   (seq-filter 'identity list))
@@ -110,6 +111,15 @@
         (replace-regexp-in-string "[ \r\t\n]+" " ")
         (grpclient--trim-to-nil)))))
 
+(defconst grpclient-response-hook-regexp
+  "^\\(->\\) +\\(.*\\)$")
+
+
+(defun grpclient--define-hook (cmax)
+  (save-excursion
+    (when (search-forward-regexp grpclient-response-hook-regexp cmax t)
+      (match-string-no-properties 2))))
+
 
 (defun grpclient--build-command ()
   (save-excursion
@@ -121,7 +131,11 @@
            (proto (cl-third url-proto-method))
            (cmax (grpclient--current-max))
            (flags (grpclient--find-flags (grpclient--current-min)))
-           (body (string-trim (buffer-substring-no-properties (min (point) cmax) cmax)))
+           (body (progn
+                   (forward-char)
+                   (when (looking-at grpclient-response-hook-regexp)
+                     (next-line))
+                   (string-trim (buffer-substring-no-properties (min (point) cmax) cmax))))
            (cmd-builder (list "grpcurl"
                               (when body (concat "-d '" (encode-coding-string (grpclient--replace-all vars body) 'utf-8) "'"))
                               (string-join grpclient-default-flags " ")
@@ -191,6 +205,7 @@ To exactly ensure what command is built call method
 `(grpclient-copy-grpcurl-to-clipboard)`"
   (interactive)
   (let ((cmd (grpclient--build-command))
+        (hook (grpclient--define-hook (grpclient--current-max)))
         (buf (get-buffer-create "*GRPC Response*"))
         (err (get-buffer-create "*GRPC Error*")))
     (with-current-buffer buf
@@ -208,17 +223,25 @@ To exactly ensure what command is built call method
            (display-buffer err))
          (with-current-buffer (process-buffer process)
            (goto-char (point-min))
+           (when hook
+             (save-excursion
+               (when (search-forward-regexp "^\{$" nil t)
+                 (beginning-of-line)
+                 (let ((json-body (buffer-substring-no-properties (point) (progn (forward-sexp) (point)))))
+                   (with-temp-buffer
+                     (insert json-body)
+                     (goto-char (point-min))
+                     (eval-expression (read hook)))))))
            (when-let ((win (get-buffer-window (current-buffer))))
              (set-window-point win (point-min)))))))))
 
-
-(defvar grpclient-last-url nil)
+(defvar grpclient--last-url nil)
 
 
 (defun grpclient-describe ()
   "Describe things."
   (interactive)
-  (let* ((url (setq grpclient-last-url (read-string "Enter url: " grpclient-last-url)))
+  (let* ((url (setq grpclient--last-url (read-string "Enter url: " grpclient--last-url)))
          (message (grpclient--trim-to-nil (read-string "Enter message or nothing: " (thing-at-point 'filename t))))
          (builder (list
                    "grpcurl -plaintext"
