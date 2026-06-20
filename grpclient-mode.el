@@ -58,7 +58,7 @@
          '(1 'grpclient-var-name-face)
          '(2 'grpclient-url-face)
          '(3 'grpclient-proto-face))
-   (list "\\(^:[^\s\n]+\\)=\\([^\s\n]+\\)$"
+   (list "\\(^:[^\s\n]+\\)=\\([^\n]+\\)$"
          '(1 'grpclient-var-name-face)
          '(2 'grpclient-var-value-face))
    (list "^\\(>>\\)"

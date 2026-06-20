@@ -107,12 +107,17 @@
 (defun grpclient--collect-vars-before ()
   (save-excursion
     (let ((vars nil)
-          (bound (point)))
+          (bound (point))
+          (sexp? nil))
       (goto-char (point-min))
       (while (search-forward-regexp "^:.+=" bound t)
+        (setq sexp? (looking-at "\(.+\)$"))
         (cl-destructuring-bind (key value) (split-string (grpclient--current-line) "=")
+          (when sexp?
+              (setq value (eval-expression (read value))))
           (setq vars (cons (cons key value) vars))))
       vars)))
+
 
 (defun grpclient--find-flags (bound)
   (save-excursion

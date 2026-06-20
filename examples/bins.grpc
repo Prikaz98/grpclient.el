@@ -3,6 +3,7 @@
 #This is a vars that you can use in your queries
 :path=.
 :address=grpcb.in:9000
+:auth=(base64-encode-string "hello:pass")
 
 #This is special var that describes flags which will be added in all following queries
 :flags=<<
@@ -35,5 +36,4 @@ GRPC grpcb.in:9000 grpcbin.GRPCBin.DummyServerStream
 
 #Concatenates two strings (max size: 10 chars)
 GRPC grpcb.in:9000 addsvc.Add.Concat
--> (json-read)
-{"a":"Hello","b":" Wrld"}
+{"a":"Hello","b":":auth"}
