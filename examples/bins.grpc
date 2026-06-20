@@ -21,11 +21,13 @@
 #
 #  To execute the command instantly call 'grpclient-send-current' by (C-c C-v)
 #    in new buffer should appear a result of the command execution.
-#
+:name=John
 #  You can play with flags below to get different output.
 GRPC :address hello.HelloService.SayHello :path/hello.proto
--> (cdr (assq 'reply (json-read)))
-{"greeting":"John"}
+-> (grpclient-set-var ":name" (cdr (assq 'reply (json-read))))
+{
+    "greeting": ":name"
+}
 
 #This query return a stream of entity that we send
 GRPC grpcb.in:9000 grpcbin.GRPCBin.DummyServerStream

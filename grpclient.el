@@ -41,6 +41,16 @@
 (defconst grpclient-comment-not-regexp (concat "^[^" grpclient-comment-separator "]"))
 (defconst grpclient-empty-line-regexp "^\\s-*$")
 
+(defvar grpclient-override-vars nil "Key Value pair list that override vars while building a query")
+
+(defun grpclient-set-var (key value)
+  "Set Value under the Key in grpclient-override-vars varaible."
+  (setq grpclient-override-vars
+        (cons
+         (cons key value)
+         (assoc-delete-all key grpclient-override-vars))))
+
+
 ;;stolen from 's beautiful library https://github.com/magnars/s.el
 (defun grpclient--replace-all (replacements s)
   "REPLACEMENTS is a list of cons-cells. Each `car` is replaced with `cdr` in S."
@@ -48,6 +58,14 @@
    (replace-regexp-in-string (regexp-opt (mapcar 'car replacements))
                              (lambda (it) (cdr (assoc-string it replacements)))
                              s t t)))
+
+
+(defun grpclient--replace-vars-with-override (vars)
+  "Replace defined in file vars with `grpclient-override-vars` variable."
+  (let* ((keys-to-override (mapcar #'car grpclient-override-vars)))
+    (dolist (key keys-to-override)
+      (setq vars (assoc-delete-all key vars)))
+    (append vars grpclient-override-vars)))
 
 
 (defun grpclient--non-nil (list)
@@ -126,7 +144,7 @@
     (goto-char (grpclient--current-min))
     (let* ((url-proto-method (cdr (string-split (grpclient--current-line) " ")))
            (url (cl-first url-proto-method))
-           (vars (grpclient--collect-vars-before))
+           (vars (grpclient--replace-vars-with-override (grpclient--collect-vars-before)))
            (method (cl-second url-proto-method))
            (proto (cl-third url-proto-method))
            (cmax (grpclient--current-max))
