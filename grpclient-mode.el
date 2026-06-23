@@ -17,6 +17,7 @@
     (define-key map (kbd "C-c C-v") #'grpclient-send-current)
     (define-key map (kbd "C-c C-u") #'grpclient-copy-grpcurl-to-clipboard)
     (define-key map (kbd "C-c C-l") #'grpclient-describe)
+    (define-key map (kbd "C-c C-c") #'grpclient-complete)
     (define-key map (kbd "<tab>") #'grpclient-toggle-pretty-body)
     map)
   "Keymap of grpclient major mode.")
