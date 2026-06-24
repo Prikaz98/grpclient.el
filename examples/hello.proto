@@ -4,6 +4,7 @@ package hello;
 
 message HelloRequest {
   optional string greeting = 1;
+  optional string name = 2;
 }
 
 message HelloResponse {
@@ -13,4 +14,5 @@ message HelloResponse {
 
 service HelloService {
   rpc SayHello(HelloRequest) returns (HelloResponse);
+  rpc SayHelloStream(stream HelloRequest) returns (HelloResponse);
 }

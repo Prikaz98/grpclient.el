@@ -6,18 +6,30 @@
 ;; Version: 0.1
 ;; Keywords: grpc tools
 
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
+;; This is free and unencumbered software released into the public domain.
 
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
+;; Anyone is free to copy, modify, publish, use, compile, sell, or
+;; distribute this software, either in source code form or as a compiled
+;; binary, for any purpose, commercial or non-commercial, and by any
+;; means.
 
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;; In jurisdictions that recognize copyright laws, the author or authors
+;; of this software dedicate any and all copyright interest in the
+;; software to the public domain. We make this dedication for the benefit
+;; of the public at large and to the detriment of our heirs and
+;; successors. We intend this dedication to be an overt act of
+;; relinquishment in perpetuity of all present and future rights to this
+;; software under copyright law.
+
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+;; IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+;; OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+;; ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+;; OTHER DEALINGS IN THE SOFTWARE.
+
+;; For more information, please refer to <https://unlicense.org/>
 
 ;;; Commentary:
 
@@ -137,9 +149,9 @@ Return nil if file is missing, stale, or corrupted."
                             grpclient-completion-cache-ttl))
                 data))
           (error
-           (user-error "Error occurred while loading cache file '%s': %s"
-                       server
-                       (error-message-string err))
+           (message "Error loading cache file '%s': %s"
+                    server
+                    (error-message-string err))
            nil))))))
 
 
@@ -149,7 +161,7 @@ Return nil if file is missing, stale, or corrupted."
 If there is not method data function does nothing."
   (let ((file (grpclient--completion-cache-file-path server))
         (methods (alist-get "methods" data nil nil #'equal)))
-    (when (and methods (append methods nil))
+    (when (and methods (> (length methods) 0))
       (make-directory (file-name-directory file) t)
       (with-temp-file file
         (insert (prin1-to-string data))))))
@@ -205,7 +217,9 @@ Returns alist:
 TEMPLATE is an alist of (FIELD . DEFAULT) from -msg-template output.
 TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
   (message "Fetching reflection data from %s..." server)
-  (let* ((services (grpclient--completion-fetch-services server))
+  (let* ((services (condition-case nil
+                       (grpclient--completion-fetch-services server)
+                     (error nil)))
          (rpc-infos nil)         ; list of (method-key . request-type)
          (request-types nil)     ; list of unique request-type strings
          (methods nil))
@@ -218,7 +232,8 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
              (text (and lines (string-join lines "\n"))))
         (when text
           (let ((pos 0))
-            (while (string-match "rpc \\([^ \t\n]+\\) ( \\.\\([^ )]+\\) )" text pos)
+            ;; Match "rpc MethodName ( [stream] .RequestType )" ignoring whitespace variations
+            (while (string-match "rpc \\([^ \t\n]+\\)\\s-*(\\s-*\\(?:stream \\)?\\.\\([^ )]+\\)\\s-*)" text pos)
               (let* ((method (match-string-no-properties 1 text))
                      (req-type (match-string-no-properties 2 text))
                      (method-key (concat svc "/" method)))
@@ -251,7 +266,7 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
                                          (substring text body-start body-end)
                                          "\n" t))
                             (when (string-match
-                                    "^\\(?:\\(repeated\\) \\)?\\([a-zA-Z][a-zA-Z0-9_.]*\\) +\\([a-z_][a-zA-Z0-9_]*\\) *="
+                                    "^\\(?:\\(repeated\\|optional\\|required\\) \\)?\\([a-zA-Z][a-zA-Z0-9_.<>]*\\) +\\([a-zA-Z_][a-zA-Z0-9_]*\\) *="
                                    line)
                               (let* ((repeated (match-string 1 line))
                                      (ptype (match-string 2 line))

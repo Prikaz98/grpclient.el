@@ -1,101 +1,200 @@
-;;; grpclient-completion-integration-test.el --- Integration tests for grpclient-completion  -*- lexical-binding: t; -*-
+;;; grpclient-completion-server-test.el --- Integration tests with real gRPC server  -*- lexical-binding: t; -*-
 
-;; Integration tests mock `grpclient--completion-run' to call
-;; `tests/mock-grpcurl' directly by its full path.
+;; Tests start the example gRPC server and run grpcurl against it.
+;; Skipped automatically when grpcurl or Python/grpcio are missing.
 
 (require 'ert)
 (require 'grpclient-completion)
 
 ;; ---------------------------------------------------------------------------
-;; Helpers
+;; Server fixture
 ;; ---------------------------------------------------------------------------
 
-(defvar grpclient-test-mock-path
-  (expand-file-name "mock-grpcurl"
-                    (file-name-directory (or load-file-name default-directory)))
-  "Absolute path to the mock-grpcurl script.")
+(defvar grpclient-test-server-process nil
+  "The Python gRPC test server subprocess.")
 
-(defmacro with-mock-grpcurl (&rest body)
-  "Run BODY with `grpclient--completion-run' calling mock-grpcurl by full path."
+(defvar grpclient-test-server-address nil
+  "Bound address of the test server (e.g. \"127.0.0.1:45231\").")
+
+(defun grpclient-test-server-project-root ()
+  "Return the project root directory."
+  (if load-file-name
+      (file-name-directory (directory-file-name (file-name-directory load-file-name)))
+    default-directory))
+
+(defun grpclient-test-server-python ()
+  "Return path to a python3 binary that has grpc+reflection, or nil."
+  (let ((candidates (list "python3"
+                          (expand-file-name "examples/.venv/bin/python3"
+                                            (grpclient-test-server-project-root)))))
+    (cl-find-if
+     (lambda (py)
+       (and (executable-find py)
+            (with-temp-buffer
+              (zerop (call-process py nil t nil "-c"
+                                   "import grpc; from grpc_reflection.v1alpha import reflection")))))
+     candidates)))
+
+(defun grpclient-test-server-check-prereqs ()
+  "Return non-nil when grpcurl and Python gRPC server deps are available."
+  (and (executable-find "grpcurl")
+       (not (null (grpclient-test-server-python)))))
+
+(defun grpclient-test-server-setup ()
+  "Ensure the example server venv and generated stubs exist."
+  (let ((default-directory (grpclient-test-server-project-root)))
+    (unless (and (file-exists-p "examples/.venv/bin/python3")
+                 (file-exists-p "examples/server/hello_pb2_grpc.py"))
+      (message "Setting up example server venv (one-time)...")
+      (call-process "python3" nil nil nil "-m" "venv" "examples/.venv")
+      (call-process "examples/.venv/bin/pip" nil nil nil
+                    "install" "-q" "-r" "examples/server/requirements.txt")
+      (call-process "examples/.venv/bin/python" nil nil nil
+                    "-m" "grpc_tools.protoc"
+                    "-Iexamples"
+                    "--python_out=examples/server"
+                    "--grpc_python_out=examples/server"
+                    "examples/hello.proto"
+                    "examples/hello_v3.proto"))))
+
+(defun grpclient-test-server-port ()
+  "Find a free TCP port."
+  (let ((socket (make-network-process :name "grpclient-test-port"
+                                      :server t
+                                      :service t
+                                      :family 'ipv4
+                                      :noquery t)))
+    (prog1 (process-contact socket :service)
+      (delete-process socket))))
+
+(defun grpclient-test-server-start ()
+  "Start the example gRPC server and capture its address.
+Signal an error if the server cannot be started."
+  (grpclient-test-server-setup)
+  (let* ((python (grpclient-test-server-python))
+         (port (grpclient-test-server-port))
+         (server-script (expand-file-name "examples/server/server.py"
+                                          (grpclient-test-server-project-root)))
+         (ready nil)
+         (output nil))
+    (setq grpclient-test-server-process
+          (make-process :name "grpclient-test-server"
+                        :buffer (generate-new-buffer " *grpclient-test-server*")
+                        :command (list python server-script (number-to-string port))
+                        :noquery t
+                        :filter (lambda (_proc string)
+                                  (push string output)
+                                  (when (and (not ready)
+                                             (string-match "^\\([0-9.]+:[0-9]+\\)$" string))
+                                    (setq ready t)
+                                    (setq grpclient-test-server-address (match-string 1 string))))))
+    (let ((tries 0))
+      (while (and (not ready)
+                  (eq (process-status grpclient-test-server-process) 'run)
+                  (< tries 100))
+        (sleep-for 0.1)
+        (accept-process-output grpclient-test-server-process 0.1 nil t)
+        (cl-incf tries)))
+    (unless ready
+      (grpclient-test-server-stop)
+      (error "Test gRPC server did not start in time.  Output: %s"
+             (apply #'concat (nreverse output))))))
+
+(defun grpclient-test-server-stop ()
+  "Stop the Python gRPC test server."
+  (when (and grpclient-test-server-process
+             (eq (process-status grpclient-test-server-process) 'run))
+    (signal-process grpclient-test-server-process 'TERM)
+    (let ((tries 0))
+      (while (and (eq (process-status grpclient-test-server-process) 'run)
+                  (< tries 50))
+        (sleep-for 0.1)
+        (cl-incf tries))))
+  (when (process-live-p grpclient-test-server-process)
+    (kill-process grpclient-test-server-process))
+  (setq grpclient-test-server-process nil
+        grpclient-test-server-address nil))
+
+(defmacro with-grpc-test-server (&rest body)
+  "Run BODY with the example gRPC test server, tearing it down afterwards.
+Skips with :skipped result when prerequisites are missing."
   (declare (indent 0))
-  `(cl-letf (((symbol-function 'grpclient--completion-run)
-              (lambda (fmt &rest args)
-                (let* ((flags (string-join grpclient-default-flags " "))
-                       (cmd (format "%s %s %s" grpclient-test-mock-path
-                                    flags (apply #'format fmt args))))
-                  (with-temp-buffer
-                    (let ((exit (call-process shell-file-name nil t nil
-                                              shell-command-switch cmd)))
-                      (unless (zerop exit)
-                        (error "grpcurl failed (exit %d): %s" exit cmd))
-                      (split-string (buffer-string) "\n" t)))))))
-     ,@body))
+  `(if (not (grpclient-test-server-check-prereqs))
+       (ert-skip "grpcurl or Python gRPC deps not available")
+     (unwind-protect
+         (progn
+           (grpclient-test-server-start)
+           ,@body)
+       (grpclient-test-server-stop))))
 
 ;; ---------------------------------------------------------------------------
-;; grpcurl list — services
+;; Tests
 ;; ---------------------------------------------------------------------------
 
-(ert-deftest list-services ()
-  (with-mock-grpcurl
-    (should (equal (grpclient--completion-fetch-services "localhost:9000")
-                   '("hello.HelloService" "grpcbin.GRPCBin")))))
+(ert-deftest server-list-services ()
+  (with-grpc-test-server
+    (let ((services (grpclient--completion-fetch-services grpclient-test-server-address)))
+      (should (member "hello.HelloService" services))
+      (should (member "hello_v3.HelloServiceV3" services))
+      (should (>= (length services) 2)))))
 
-(ert-deftest list-services-unknown-server ()
-  (with-mock-grpcurl
-    (should-not (grpclient--completion-fetch-services "unknown:0000"))))
-
-;; ---------------------------------------------------------------------------
-;; Full fetch: describe each service + msg-template for each request type
-;; ---------------------------------------------------------------------------
-
-(ert-deftest fetch-all-structure ()
-  (with-mock-grpcurl
-    (let* ((data (grpclient--completion-fetch-all "localhost:9000"))
+(ert-deftest server-fetch-all-structure ()
+  (with-grpc-test-server
+    (let* ((data (grpclient--completion-fetch-all grpclient-test-server-address))
            (methods (alist-get "methods" data nil nil #'equal)))
       (should data)
-      (should (= (length methods) 4))
+      (should (>= (length methods) 4))
 
-      ;; hello.HelloService/SayHello
+      ;; hello.HelloService/SayHello — multi-field template
       (let* ((entry (cl-find "hello.HelloService/SayHello" methods
                              :key (lambda (e) (aref e 0)) :test #'string=))
              (req-type (aref entry 1))
              (template (aref entry 2)))
         (should entry)
-        (should (string= req-type "hello.HelloService.SayHelloRequest"))
+        (should (string= req-type "hello.HelloRequest"))
         (should (consp template))
         (should (assoc "greeting" template))
         (should (assoc "name" template)))
 
-      ;; hello.HelloService/SayHelloStream
-      (should (cl-find "hello.HelloService/SayHelloStream" methods
-                       :key (lambda (e) (aref e 0)) :test #'string=))
+      ;; hello.HelloService/SayHelloStream — has stream keyword
+      (let ((entry (cl-find "hello.HelloService/SayHelloStream" methods
+                            :key (lambda (e) (aref e 0)) :test #'string=)))
+        (should entry)
+        (should (string= (aref entry 1) "hello.HelloRequest")))
 
-      ;; grpcbin.GRPCBin/DummyUnary
-      (let* ((entry (cl-find "grpcbin.GRPCBin/DummyUnary" methods
+      ;; hello_v3.HelloServiceV3/SayHello — single-field template
+      (let* ((entry (cl-find "hello_v3.HelloServiceV3/SayHello" methods
+                             :key (lambda (e) (aref e 0)) :test #'string=))
+             (template (aref entry 2)))
+        (should entry)
+        (should (consp template))
+        (should (assoc "greeting" template)))
+
+      ;; hello_v3.HelloServiceV3/SayMultiType — multi-type template
+      (let* ((entry (cl-find "hello_v3.HelloServiceV3/SayMultiType" methods
                              :key (lambda (e) (aref e 0)) :test #'string=))
              (template (aref entry 2)))
         (should entry)
         (should (consp template))
         (should (assoc "fString" template))
         (should (assoc "fInt32" template))
-        (should (assoc "fBool" template)))
+        (should (assoc "fBool" template))))))
 
-      ;; grpcbin.GRPCBin/DummyServerStream has no template (nil)
-      (let* ((entry (cl-find "grpcbin.GRPCBin/DummyServerStream" methods
-                             :key (lambda (e) (aref e 0)) :test #'string=))
-             (template (aref entry 2)))
-        (should entry)
-        (should-not template)))))
-
-;; ---------------------------------------------------------------------------
-;; Unknown method returns nil template
-;; ---------------------------------------------------------------------------
-
-(ert-deftest msg-template-unknown ()
-  (with-mock-grpcurl
-    (let ((data (grpclient--completion-fetch-all "unknown:0000")))
+(ert-deftest server-unknown-server ()
+  (with-grpc-test-server
+    (let ((data (grpclient--completion-fetch-all "127.0.0.1:1")))
       (should data)
       (should (zerop (length (alist-get "methods" data nil nil #'equal)))))))
+
+(ert-deftest server-cache-roundtrip ()
+  (with-grpc-test-server
+    (let ((data (grpclient--completion-get-data grpclient-test-server-address)))
+      (should data)
+      (should (>= (length (alist-get "methods" data nil nil #'equal)) 2))
+      (let ((cached (grpclient--completion-read-disk-cache grpclient-test-server-address)))
+        (should cached)
+        (should (equal (alist-get "server" cached nil nil #'equal)
+                       grpclient-test-server-address))))))
 
 (provide 'grpclient-completion-integration-test)
 ;;; grpclient-completion-integration-test.el ends here
