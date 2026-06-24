@@ -48,10 +48,10 @@ def serve():
     except ImportError:
         print("gRPC reflection not available. Install grpcio-reflection.")
 
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 9000
-    bound = server.add_insecure_port(f'127.0.0.1:{port}')
+    server.add_insecure_port('[::]:9000')
     server.start()
-    print(f'127.0.0.1:{bound}', flush=True)
+    print("127.0.0.1:9000", flush=True)
+    print("gRPC Server running on port 9000...")
     server.wait_for_termination()
 
 if __name__ == '__main__':

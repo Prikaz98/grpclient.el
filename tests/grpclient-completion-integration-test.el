@@ -1,4 +1,4 @@
-;;; grpclient-completion-server-test.el --- Integration tests with real gRPC server  -*- lexical-binding: t; -*-
+;;; grpclient-completion-integration-test.el --- Integration tests with real gRPC server  -*- lexical-binding: t; -*-
 
 ;; Tests start the example gRPC server and run grpcurl against it.
 ;; Skipped automatically when grpcurl or Python/grpcio are missing.
@@ -57,22 +57,11 @@
                     "examples/hello.proto"
                     "examples/hello_v3.proto"))))
 
-(defun grpclient-test-server-port ()
-  "Find a free TCP port."
-  (let ((socket (make-network-process :name "grpclient-test-port"
-                                      :server t
-                                      :service t
-                                      :family 'ipv4
-                                      :noquery t)))
-    (prog1 (process-contact socket :service)
-      (delete-process socket))))
-
 (defun grpclient-test-server-start ()
   "Start the example gRPC server and capture its address.
 Signal an error if the server cannot be started."
   (grpclient-test-server-setup)
   (let* ((python (grpclient-test-server-python))
-         (port (grpclient-test-server-port))
          (server-script (expand-file-name "examples/server/server.py"
                                           (grpclient-test-server-project-root)))
          (ready nil)
@@ -80,7 +69,7 @@ Signal an error if the server cannot be started."
     (setq grpclient-test-server-process
           (make-process :name "grpclient-test-server"
                         :buffer (generate-new-buffer " *grpclient-test-server*")
-                        :command (list python server-script (number-to-string port))
+                        :command (list python server-script)
                         :noquery t
                         :filter (lambda (_proc string)
                                   (push string output)
