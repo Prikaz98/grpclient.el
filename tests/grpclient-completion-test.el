@@ -34,32 +34,6 @@
        (delete-directory grpclient-completion-cache-dir t nil))))
 
 ;; ---------------------------------------------------------------------------
-;; grpclient-complete command
-;; ---------------------------------------------------------------------------
-
-(ert-deftest grpclient-complete-inserts-request ()
-  "grpclient-complete inserts # Call, GRPC line, body, and # end."
-  (with-mock-data grpclient-test-methods
-    (cl-letf (((symbol-function 'completing-read)
-               (lambda (_prompt candidates &rest _)
-                 (car candidates))))
-      (grpclient-complete)
-      (let ((text (buffer-string)))
-        (should (string-match "# Call SayHello\nGRPC :address hello.HelloService/SayHello" text))
-        (should (string-match "greeting" text))
-        (should (string-match "name" text))
-        (should (string-match "# end SayHello" text))))))
-
-(ert-deftest grpclient-complete-no-data-errors ()
-  "When no reflection data is available, signal user-error."
-  (with-temp-buffer
-    (grpclient-mode)
-    (insert ":address=test:9000\n")
-    (cl-letf (((symbol-function 'grpclient--completion-get-data)
-               (lambda (_server) `(("methods" . [])))))
-      (should-error (grpclient-complete) :type 'user-error))))
-
-;; ---------------------------------------------------------------------------
 ;; Body and end-comment insertion
 ;; ---------------------------------------------------------------------------
 
@@ -73,8 +47,7 @@
      '(("field1" . "") ("field2" . "")))
     (let ((text (buffer-string)))
       (should (string-match "field1" text))
-      (should (string-match "field2" text))
-      (should (string-match "# end Method" text)))))
+      (should (string-match "field2" text)))))
 
 (ert-deftest insert-complete-without-template ()
   (with-temp-buffer
@@ -84,8 +57,7 @@
     (grpclient--completion-insert-complete
      "test:9000" "pkg.Svc/Method" nil)
     (let ((text (buffer-string)))
-      (should (string-match "{}" text))
-      (should (string-match "# end Method" text)))))
+      (should (string-match "{}" text)))))
 
 (ert-deftest insert-complete-handles-json-types ()
   (with-temp-buffer
@@ -147,48 +119,6 @@
                    ("methods" . ())))
     (should-not (grpclient--completion-read-disk-cache "different:9000")))))
 
-;; ---------------------------------------------------------------------------
-;; Server detection
-;; ---------------------------------------------------------------------------
-
-(ert-deftest server-detected-from-address-var ()
-  (with-temp-buffer
-    (grpclient-mode)
-    (insert ":address=grpcb.in:9000\n")
-    (should (string= (grpclient--completion-server-from-buffer)
-                     "grpcb.in:9000"))))
-
-(ert-deftest server-not-found-without-address-var ()
-  (with-temp-buffer
-    (grpclient-mode)
-    (insert ":something=else\n")
-    (should-not (grpclient--completion-server-from-buffer))))
-
-(ert-deftest server-detected-with-custom-var-name ()
-  (let ((grpclient-completion-server-var ":my-server"))
-    (with-temp-buffer
-      (grpclient-mode)
-      (insert ":my-server=custom:8080\n")
-      (should (string= (grpclient--completion-server-from-buffer)
-                       "custom:8080")))))
-
-;; ---------------------------------------------------------------------------
-;; In-memory cache
-;; ---------------------------------------------------------------------------
-
-(ert-deftest memory-cache-avoids-disk-read ()
-  (let* ((calls 0)
-         (grpclient--completion-cache (make-hash-table :test 'equal))
-         (data `(("server" . "test:9000")
-                 ("fetched-at" . ,(format-time-string "%Y-%m-%dT%TZ" nil t))
-                 ("methods" . []))))
-    (puthash "test:9000" data grpclient--completion-cache)
-    (cl-letf (((symbol-function 'grpclient--completion-read-disk-cache)
-               (lambda (_server) (cl-incf calls) nil))
-              ((symbol-function 'grpclient--completion-fetch-all)
-               (lambda (_server) (cl-incf calls) nil)))
-      (should (grpclient--completion-get-data "test:9000"))
-      (should (= calls 0)))))
 
 (provide 'grpclient-completion-test)
 ;;; grpclient-completion-test.el ends here

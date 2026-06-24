@@ -29,6 +29,8 @@ in ~grpclient-mode~) or call it via ~M-x~:
 #+begin_src emacs-lisp
 (use-package grpclient-completion
   :after grpclient
+  :ensure nil
+  :load-path "~/path/to/grpclient.el/"
   :bind (:map grpclient-mode-map ("C-c C-c" . grpclient-complete)))
 #+end_src
 
