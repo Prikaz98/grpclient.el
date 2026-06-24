@@ -50,7 +50,6 @@ def serve():
 
     server.add_insecure_port('[::]:9000')
     server.start()
-    print("127.0.0.1:9000", flush=True)
     print("gRPC Server running on port 9000...")
     server.wait_for_termination()
 
