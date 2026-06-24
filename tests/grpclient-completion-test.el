@@ -9,15 +9,13 @@
 
 (defvar grpclient-test-methods
   (let ((tpl1 '(("greeting" . "") ("name" . "")))
-        (typ1 '(("greeting" . "string") ("name" . "string")))
-        (tpl2 '(("fString" . "") ("fInt32" . 0) ("fBool" . :json-false)))
-        (typ2 '(("fString" . "string") ("fInt32" . "int32") ("fBool" . "bool"))))
+        (tpl2 '(("fString" . "") ("fInt32" . 0) ("fBool" . :json-false))))
     `(("methods" .
        ,(vector
-         (vector "hello.HelloService/SayHello" "hello.HelloService.SayHelloRequest" tpl1 typ1)
-         (vector "hello.HelloService/SayHelloStream" "hello.HelloService.SayHelloRequest" tpl1 typ1)
-         (vector "grpcbin.GRPCBin/DummyServerStream" "grpcbin.GRPCBin.DummyServerStreamRequest" nil nil)
-         (vector "grpcbin.GRPCBin/DummyUnary" "grpcbin.GRPCBin.DummyUnaryRequest" tpl2 typ2))))))
+         (vector "hello.HelloService/SayHello" "hello.HelloService.SayHelloRequest" tpl1)
+         (vector "hello.HelloService/SayHelloStream" "hello.HelloService.SayHelloRequest" tpl1)
+         (vector "grpcbin.GRPCBin/DummyServerStream" "grpcbin.GRPCBin.DummyServerStreamRequest" nil)
+         (vector "grpcbin.GRPCBin/DummyUnary" "grpcbin.GRPCBin.DummyUnaryRequest" tpl2))))))
 
 (defmacro with-mock-data (data &rest body)
   "Create a grpclient-mode buffer with :address and mock DATA."
@@ -40,19 +38,17 @@
 ;; ---------------------------------------------------------------------------
 
 (ert-deftest grpclient-complete-inserts-request ()
-  "grpclient-complete inserts GRPC line, body, and end comment."
+  "grpclient-complete inserts # Call, GRPC line, body, and # end."
   (with-mock-data grpclient-test-methods
     (cl-letf (((symbol-function 'completing-read)
                (lambda (_prompt candidates &rest _)
                  (car candidates))))
-      (let ((grpclient-completion-show-types nil))
-        (grpclient-complete)
-        (let ((text (buffer-string)))
-          (should (string-match "# Call SayHello" text))
-          (should (string-match "GRPC :address hello.HelloService/SayHello" text))
-          (should (string-match "greeting" text))
-          (should (string-match "name" text))
-          (should (string-match "# end SayHello" text)))))))
+      (grpclient-complete)
+      (let ((text (buffer-string)))
+        (should (string-match "# Call SayHello\nGRPC :address hello.HelloService/SayHello" text))
+        (should (string-match "greeting" text))
+        (should (string-match "name" text))
+        (should (string-match "# end SayHello" text))))))
 
 (ert-deftest grpclient-complete-no-data-errors ()
   "When no reflection data is available, signal user-error."
@@ -74,10 +70,8 @@
     (goto-char (point-max))
     (grpclient--completion-insert-complete
      "test:9000" "pkg.Svc/Method"
-     '(("field1" . "") ("field2" . ""))
-     '(("field1" . "string") ("field2" . "int32")))
+     '(("field1" . "") ("field2" . "")))
     (let ((text (buffer-string)))
-      (should (string-match "# Call Method" text))
       (should (string-match "field1" text))
       (should (string-match "field2" text))
       (should (string-match "# end Method" text)))))
@@ -90,39 +84,8 @@
     (grpclient--completion-insert-complete
      "test:9000" "pkg.Svc/Method" nil)
     (let ((text (buffer-string)))
-      (should (string-match "# Call Method" text))
       (should (string-match "{}" text))
       (should (string-match "# end Method" text)))))
-
-(ert-deftest insert-complete-shows-types ()
-  "With show-types on, field lines have // type annotations."
-  (with-temp-buffer
-    (grpclient-mode)
-    (insert "GRPC test:9000 pkg.Svc/Method")
-    (goto-char (point-max))
-    (let ((grpclient-completion-show-types t))
-      (grpclient--completion-insert-complete
-       "test:9000" "pkg.Svc/Method"
-       '(("field" . "") ("count" . 0))
-       '(("field" . "string") ("count" . "int32"))))
-    (let ((text (buffer-string)))
-      (should (string-match "// string" text))
-      (should (string-match "// int32" text)))))
-
-(ert-deftest insert-complete-hides-types ()
-  "With show-types nil, no type annotations."
-  (with-temp-buffer
-    (grpclient-mode)
-    (insert "GRPC test:9000 pkg.Svc/Method")
-    (goto-char (point-max))
-    (let ((grpclient-completion-show-types nil))
-      (grpclient--completion-insert-complete
-       "test:9000" "pkg.Svc/Method"
-       '(("field" . "") ("count" . 0))
-       '(("field" . "string") ("count" . "int32"))))
-    (let ((text (buffer-string)))
-      (should-not (string-match "// string" text))
-      (should (string-match "field" text)))))
 
 (ert-deftest insert-complete-handles-json-types ()
   (with-temp-buffer
@@ -131,12 +94,13 @@
     (goto-char (point-max))
     (grpclient--completion-insert-complete
      "test:9000" "pkg.Svc/Method"
-     '(("str" . "") ("num" . 0) ("flag" . :json-false) ("null-val" . nil)))
+     '(("str" . "") ("num" . 0) ("flag" . :json-false) ("null-val" . nil) ("nested" ("value" . ""))))
     (let ((text (buffer-string)))
       (should (string-match "\"str\": \"\"" text))
       (should (string-match "\"num\": 0" text))
       (should (string-match "\"flag\": false" text))
-      (should (string-match "\"null-val\": null" text)))))
+      (should (string-match "\"null-val\": null" text))
+      (should (string-match "\"nested\": { \"value\": \"\" }" text)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Cache roundtrip

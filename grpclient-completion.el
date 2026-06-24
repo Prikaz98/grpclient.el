@@ -63,12 +63,6 @@
   :type 'integer
   :group 'grpclient)
 
-(defcustom grpclient-completion-show-types t
-  "When non-nil, annotate JSON body fields with protobuf types.
-The type is appended as a trailing comment on each field line."
-  :type 'boolean
-  :group 'grpclient)
-
 ;; --- In-memory cache -------------------------------------------------
 
 (defvar grpclient--completion-cache (make-hash-table :test 'equal)
@@ -266,12 +260,17 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
         ((null val) "null")
         ((eq val :json-false) "false")
         ((eq val t) "true")
+        ((listp val)
+         (let ((parts (mapcar (lambda (p)
+                                (format "\"%s\": %s" (car p)
+                                        (grpclient--completion-format-value (cdr p))))
+                              val)))
+           (format "{ %s }" (string-join parts ", "))))
         (t (format "\"%s\"" (prin1-to-string val)))))
 
-(defun grpclient--completion-insert-complete (server method-key template &optional types)
-  "After completing METHOD-KEY, insert # Call, body template, and # end.
-SERVER is used for variable resolution; TEMPLATE is an alist.
-TYPES is an alist of (JSON-FIELD . PROTO-TYPE) for annotations."
+(defun grpclient--completion-insert-complete (server method-key template)
+  "After completing METHOD-KEY, insert body template and # end.
+SERVER is used for variable resolution; TEMPLATE is an alist."
   (let* ((short-name (and (string-match "/\\([^/]+\\)$" method-key)
                           (match-string 1 method-key)))
          (pairs (and template
@@ -279,19 +278,12 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE) for annotations."
                                (let* ((key (car p))
                                       (val (cdr p))
                                       (base (format "    \"%s\": %s" key
-                                                    (grpclient--completion-format-value val)))
-                                      (type-str (and grpclient-completion-show-types
-                                                     types
-                                                     (cdr (assoc key types)))))
-                                  (if (stringp type-str)
-                                      (format "%-40s // %s" base type-str)
-                                    base)))
+                                                    (grpclient--completion-format-value val))))
+                                 base))
                              template)))
          (body (if pairs
                    (concat "{\n" (string-join pairs ",\n") "\n}")
                  "{}")))
-    (insert (format "# Call %s\n" short-name))
-    (end-of-line)
     (insert (concat "\n" body "\n\n# end " short-name "\n"))))
 
 ;; --- Interactive commands --------------------------------------------
@@ -327,11 +319,15 @@ Inserts:
                            :key (lambda (e) (aref e 0))
                            :test #'string=)))
       (when entry
-        (let ((template (aref entry 2))
-              (types (and (> (length entry) 3) (aref entry 3))))
+        (let* ((template (aref entry 2))
+               (short-name (and (string-match "/\\([^/]+\\)$" method-key)
+                                (match-string 1 method-key))))
+          (insert (format "# Call %s\n" short-name))
           (insert (format "GRPC :address %s" method-key))
-          (grpclient--completion-insert-complete
-           server method-key template types))))))
+          (let ((grpc-end (point)))
+            (grpclient--completion-insert-complete
+             server method-key template)
+            (goto-char grpc-end))))))
 
 ;;;###autoload
 (defun grpclient-refresh-cache (&optional server)
