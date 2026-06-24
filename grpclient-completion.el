@@ -354,16 +354,23 @@ Inserts:
 
   # end <Method>"
   (interactive)
-  (let* ((server (grpclient--completion-server-from-buffer))
-         (data (and server
-                    (condition-case nil
-                        (grpclient--completion-get-data server)
-                      (error nil))))
+  (let* ((server (or (grpclient--completion-server-from-buffer)
+                     (read-string "gRPC server address: ")))
+         (data (condition-case nil
+                   (grpclient--completion-get-data server)
+                 (error nil)))
          (methods (alist-get "methods" data nil nil #'equal))
          (all (and methods (append methods nil))))
     (unless all
-      (user-error "No reflection data; set %s in the buffer or run grpclient-refresh-cache"
-                  grpclient-completion-server-var))
+      (message "No cached data — fetching from %s..." server)
+      (grpclient-refresh-cache server)
+      (setq data (condition-case nil
+                     (grpclient--completion-get-data server)
+                   (error nil))
+            methods (alist-get "methods" data nil nil #'equal)
+            all (and methods (append methods nil))))
+    (unless all
+      (user-error "Cannot reach %s — check the address and ensure grpcurl is installed" server))
     (let* ((method-key (grpclient--completing-read "Method: "
                                                     (mapcar (lambda (e) (aref e 0)) all)
                                                     nil t nil nil))
