@@ -1,8 +1,8 @@
 ;;; grpclient-completion.el --- Completion for grpclient-mode using gRPC reflection  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025  Ivan Prikaznov
+;; Copyright (C) 2026  Miloš Tepić
 
-;; Author: Ivan Prikaznov <prikaznov555@gmail.com>
+;; Author: Miloš Tepić <tepcmils@gmail.com>
 ;; Version: 0.1
 ;; Keywords: grpc tools
 
@@ -62,6 +62,57 @@
   "Seconds before cached reflection data is refetched (default 24 hours)."
   :type 'integer
   :group 'grpclient)
+
+(defcustom grpclient-completion-system 'auto
+  "Completion framework used for selecting gRPC methods.
+When `auto', the active framework is detected from enabled minor modes.
+Set to `default' to use plain `completing-read' (works with vertico,
+consult, icomplete, selectrum, etc.)."
+  :type '(radio
+          (const :tag "Auto-detect" auto)
+          (const :tag "Ido" ido)
+          (const :tag "Helm" helm)
+          (const :tag "Ivy" ivy)
+          (const :tag "Default" default)
+          (function :tag "Custom function"))
+  :group 'grpclient)
+
+(defun grpclient--completing-read (prompt collection &optional predicate require-match
+                                            initial-input hist def inherit-input-method)
+  "Read a choice from COLLECTION using `grpclient-completion-system'.
+PROMPT and remaining arguments match `completing-read'."
+  (let ((system (if (eq grpclient-completion-system 'auto)
+                    (cond ((bound-and-true-p helm-mode) 'helm)
+                          ((bound-and-true-p ivy-mode)  'ivy)
+                          ((bound-and-true-p ido-mode)  'ido)
+                          (t 'default))
+                  grpclient-completion-system)))
+    (pcase system
+      ('default
+       (completing-read prompt collection predicate require-match
+                        initial-input hist def inherit-input-method))
+      ('ido
+       (ido-completing-read prompt collection predicate require-match
+                            initial-input hist def inherit-input-method))
+      ('helm
+       (if (require 'helm nil 'noerror)
+           (helm-comp-read prompt collection
+                           :must-match require-match
+                           :initial-input initial-input)
+         (completing-read prompt collection predicate require-match
+                          initial-input hist def inherit-input-method)))
+      ('ivy
+       (if (require 'ivy nil 'noerror)
+           (ivy-completing-read prompt collection predicate require-match
+                                initial-input hist def inherit-input-method)
+         (completing-read prompt collection predicate require-match
+                          initial-input hist def inherit-input-method)))
+      ((pred functionp)
+       (funcall system prompt collection predicate require-match
+                initial-input hist def inherit-input-method))
+      (_
+       (completing-read prompt collection predicate require-match
+                        initial-input hist def inherit-input-method)))))
 
 ;; --- In-memory cache -------------------------------------------------
 
@@ -284,7 +335,7 @@ SERVER is used for variable resolution; TEMPLATE is an alist."
          (body (if pairs
                    (concat "{\n" (string-join pairs ",\n") "\n}")
                  "{}")))
-    (insert (concat "\n" body "\n\n# end " short-name "\n"))))
+    (insert (concat "\n" body "\n\n# End " short-name "\n"))))
 
 ;; --- Interactive commands --------------------------------------------
 
@@ -292,8 +343,9 @@ SERVER is used for variable resolution; TEMPLATE is an alist."
 (defun grpclient-complete ()
   "Insert a complete gRPC request at point.
 
-Prompts for a Service/Method using `completing-read' (works with
-consult, vertico, icomplete, or the default Emacs completion UI).
+Prompts for a Service/Method using `grpclient--completing-read'
+(respects `grpclient-completion-system': auto-detects helm, ivy,
+ido, or falls back to plain `completing-read').
 
 Inserts:
   # Call <Method>
@@ -312,9 +364,9 @@ Inserts:
     (unless all
       (user-error "No reflection data; set %s in the buffer or run grpclient-refresh-cache"
                   grpclient-completion-server-var))
-    (let* ((method-key (completing-read "Method: "
-                                        (mapcar (lambda (e) (aref e 0)) all)
-                                        nil t nil nil))
+    (let* ((method-key (grpclient--completing-read "Method: "
+                                                    (mapcar (lambda (e) (aref e 0)) all)
+                                                    nil t nil nil))
            (entry (cl-find method-key all
                            :key (lambda (e) (aref e 0))
                            :test #'string=)))
@@ -327,7 +379,7 @@ Inserts:
           (let ((grpc-end (point)))
             (grpclient--completion-insert-complete
              server method-key template)
-            (goto-char grpc-end))))))
+            (goto-char grpc-end)))))))
 
 ;;;###autoload
 (defun grpclient-refresh-cache (&optional server)
