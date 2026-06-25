@@ -28,6 +28,7 @@
       (require 'cl)
     (require 'cl-lib)))
 (require 'grpclient-mode)
+(require 'grpclient-completion)
 
 (defcustom grpclient-default-flags '("-plaintext")
   "Default flags that append in every query."

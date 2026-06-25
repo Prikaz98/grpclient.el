@@ -10,6 +10,17 @@ message HelloResponseV3 {
   string reply = 1;
 }
 
+message MultiTypeRequest {
+  string fString = 1;
+  int32 fInt32 = 2;
+  bool fBool = 3;
+}
+
+message MultiTypeResponse {
+  string reply = 1;
+}
+
 service HelloServiceV3 {
   rpc SayHello(HelloRequestV3) returns (HelloResponseV3);
+  rpc SayMultiType(MultiTypeRequest) returns (MultiTypeResponse);
 }

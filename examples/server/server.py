@@ -16,10 +16,19 @@ class HelloService(hello_pb2_grpc.HelloServiceServicer):
         greeting = request.greeting if request.HasField('greeting') else 'World'
         return hello_pb2.HelloResponse(reply=f'Hello from v2, {greeting}!')
 
+    def SayHelloStream(self, request_iterator, context):
+        for req in request_iterator:
+            greeting = req.greeting if req.HasField('greeting') else 'World'
+            yield hello_pb2.HelloResponse(reply=f'Hello stream, {greeting}!')
+
 class HelloServiceV3(hello_v3_pb2_grpc.HelloServiceV3Servicer):
     def SayHello(self, request, context):
         greeting = request.greeting if request.greeting else 'World'
         return hello_v3_pb2.HelloResponseV3(reply=f'Hello from v3, {greeting}!')
+
+    def SayMultiType(self, request, context):
+        return hello_v3_pb2.MultiTypeResponse(
+            reply=f'Got: {request.fString} {request.fInt32} {request.fBool}')
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
