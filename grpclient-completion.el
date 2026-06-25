@@ -53,7 +53,6 @@
 
 (require 'json)
 (require 'cl-lib)
-(require 'grpclient)
 
 ;; --- Customization ---------------------------------------------------
 
@@ -161,7 +160,7 @@ Return nil if file is missing, stale, or corrupted."
 If there is not method data function does nothing."
   (let ((file (grpclient--completion-cache-file-path server))
         (methods (alist-get "methods" data nil nil #'equal)))
-    (when (and methods (> (length methods) 0))
+    (when (and methods (append methods nil))
       (make-directory (file-name-directory file) t)
       (with-temp-file file
         (insert (prin1-to-string data))))))
@@ -217,18 +216,14 @@ Returns alist:
 TEMPLATE is an alist of (FIELD . DEFAULT) from -msg-template output.
 TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
   (message "Fetching reflection data from %s..." server)
-  (let* ((services (condition-case nil
-                       (grpclient--completion-fetch-services server)
-                     (error nil)))
+  (let* ((services (grpclient--completion-fetch-services server))
          (rpc-infos nil)         ; list of (method-key . request-type)
          (request-types nil)     ; list of unique request-type strings
          (methods nil))
 
     ;; Phase 1: describe each service and extract rpc method + request type
     (dolist (svc services)
-      (let* ((lines (condition-case nil
-                        (grpclient--completion-run "%s describe %s" server svc)
-                      (error nil)))
+      (let* ((lines (grpclient--completion-run "%s describe %s" server svc))
              (text (and lines (string-join lines "\n"))))
         (when text
           (let ((pos 0))
@@ -245,10 +240,8 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
     (let ((templates (make-hash-table :test 'equal))
           (types-map (make-hash-table :test 'equal)))
       (dolist (req-type request-types)
-        (let* ((lines (condition-case nil
-                          (grpclient--completion-run "-msg-template %s describe %s"
-                                                     server req-type)
-                        (error nil)))
+        (let* ((lines (grpclient--completion-run "-msg-template %s describe %s"
+                                                     server req-type))
                (text (and lines (string-join lines "\n")))
                (json-start (when text
                              (string-match "Message template:\n" text)))
@@ -312,14 +305,14 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
         ((null val) "null")
         ((eq val :json-false) "false")
         ((eq val t) "true")
-        ((vectorp val) (format "[ %s ] "
-                               (string-join (mapcar #'grpclient--completion-format-value val) ", ")))
+        ((vectorp val) (format "[%s]"
+                               (string-join (mapcar #'grpclient--completion-format-value val) ",")))
         ((listp val)
          (let ((parts (mapcar (lambda (p)
-                                (format "\"%s\": %s" (car p)
+                                (format "\"%s\":%s" (car p)
                                         (grpclient--completion-format-value (cdr p))))
                               val)))
-           (format "{ %s }" (string-join parts ", "))))
+           (format "{%s}" (string-join parts ","))))
         (t (progn
              (message "Unexpected literal %s" (prin1-to-string val))
              (format "%s" (prin1-to-string val))))))
@@ -334,7 +327,7 @@ SERVER is used for variable resolution; TEMPLATE is an alist."
                      (mapcar (lambda (p)
                                (let* ((key (car p))
                                       (val (cdr p))
-                                      (base (format "\"%s\": %s" key
+                                      (base (format "\"%s\":%s" key
                                                     (grpclient--completion-format-value val))))
                                  base))
                              template)))

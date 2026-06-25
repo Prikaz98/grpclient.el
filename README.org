@@ -17,7 +17,7 @@
 
 * Quick Insert (gRPC Reflection)
 Insert complete gRPC requests using server reflection.  Uses
-standard ~completing-read~ (works with consult, vertico, icomplete).
+standard ~completing-read~ (works with consult, vertico, icomplete, fido, ido, helm, ivy).
 
 Call ~grpclient-complete~ (~C-c C-c~ in ~grpclient-mode~) or ~M-x~.
 It prompts for a server address and method name, then inserts:

@@ -19,7 +19,6 @@
 
 (ert-deftest insert-complete-with-template ()
   (with-temp-buffer
-    (grpclient-mode)
     (insert "GRPC test:9000 pkg.Svc/Method")
     (goto-char (point-max))
     (grpclient--completion-insert-complete
@@ -31,7 +30,6 @@
 
 (ert-deftest insert-complete-without-template ()
   (with-temp-buffer
-    (grpclient-mode)
     (insert "GRPC test:9000 pkg.Svc/Method")
     (goto-char (point-max))
     (grpclient--completion-insert-complete
@@ -41,18 +39,17 @@
 
 (ert-deftest insert-complete-handles-json-types ()
   (with-temp-buffer
-    (grpclient-mode)
     (insert "GRPC test:9000 Method")
     (goto-char (point-max))
     (grpclient--completion-insert-complete
      "test:9000" "pkg.Svc/Method"
      '(("str" . "") ("num" . 0) ("flag" . :json-false) ("null-val" . nil) ("nested" ("value" . ""))))
     (let ((text (buffer-string)))
-      (should (string-match "\"str\": \"\"" text))
-      (should (string-match "\"num\": 0" text))
-      (should (string-match "\"flag\": false" text))
-      (should (string-match "\"null-val\": null" text))
-      (should (string-match "\"nested\": { \"value\": \"\" }" text)))))
+      (should (string-match "\"str\":\"\"" text))
+      (should (string-match "\"num\":0" text))
+      (should (string-match "\"flag\":false" text))
+      (should (string-match "\"null-val\":null" text))
+      (should (string-match "\"nested\":{\"value\":\"\"}" text)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Cache roundtrip
