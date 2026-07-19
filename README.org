@@ -1,7 +1,5 @@
 #+title: GRPClient
 
-[[https://img.shields.io/static/v1?label=grpclient.el&message=0.1.0&color=blue][Version]]
-
 #+html: <img alt="" src="https://img.shields.io/static/v1?label=grpclient.el&message=0.1.0&color=blue"/>
 
 [[https://github.com/fullstorydev/grpcurl][gRPCurl]] query builder from plain-text sheets havily inspired by [[https://github.com/pashky/restclient.el][restclient.el]]
