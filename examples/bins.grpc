@@ -27,7 +27,7 @@
 GRPC :address hello.HelloService.SayHello :path/hello.proto
 -> (grpclient-set-var ":name" (cdr (assq 'reply (json-read))))
 {
-    "greeting": ":name"
+  "greeting": ":name"
 }
 
 #This query return a stream of entity that we send

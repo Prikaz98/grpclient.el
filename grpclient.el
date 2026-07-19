@@ -1,27 +1,48 @@
-;;; grpclient.el --- Description -*- lexical-binding: t; -*-
+;;; grpclient.el --- grpcurl interactive builder -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2025 Ivan Prikaznov
+;; Copyright (C) 2026 Ivan Prikaznov
 ;;
 ;; Author: Ivan Prikaznov <prikaznov555@gmail.com>
 ;; Maintainer: Ivan Prikaznov <prikaznov555@gmail.com>
 ;; Created: 14 Mar 2025
-;; Keywords: grpc grpcurl
+;; Keywords: grpc grpcurl tools
+;; Version: 0.1.0
 
-;;
+;; This is free and unencumbered software released into the public domain.
+
+;; Anyone is free to copy, modify, publish, use, compile, sell, or
+;; distribute this software, either in source code form or as a compiled
+;; binary, for any purpose, commercial or non-commercial, and by any
+;; means.
+
+;; In jurisdictions that recognize copyright laws, the author or authors
+;; of this software dedicate any and all copyright interest in the
+;; software to the public domain. We make this dedication for the benefit
+;; of the public at large and to the detriment of our heirs and
+;; successors. We intend this dedication to be an overt act of
+;; relinquishment in perpetuity of all present and future rights to this
+;; software under copyright law.
+
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+;; EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+;; MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+;; IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+;; OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+;; ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+;; OTHER DEALINGS IN THE SOFTWARE.
+
+;; For more information, please refer to <https://unlicense.org/>
+
 ;; This file is not part of GNU Emacs.
-;;
 
 ;;; Commentary:
+
 ;; This is tool to manually explore and test GRPC Services based on
 ;; https://github.com/fullstorydev/grpcurl project. Runs queries for a
 ;; plain-text query sheet, displays results in separated buffer.
 
-;;; TODO:
-;; - hooks
-;; - print message to install grpcurl if it doesn't exists
-
 ;;; Code:
-;;
+
 (require 'json)
 (eval-when-compile
   (if (version< emacs-version "26")
@@ -41,8 +62,10 @@
 (defconst grpclient-comment-start-regexp (concat "^" grpclient-comment-separator))
 (defconst grpclient-comment-not-regexp (concat "^[^" grpclient-comment-separator "]"))
 (defconst grpclient-empty-line-regexp "^\\s-*$")
+(defconst grpclient-response-hook-regexp "^\\(->\\) +\\(.*\\)$")
 
 (defvar grpclient-override-vars nil "Key Value pair list that override vars while building a query")
+
 
 (defun grpclient-set-var (key value)
   "Set Value under the Key in grpclient-override-vars varaible."
@@ -135,9 +158,6 @@
         (replace-regexp-in-string "[ \r\t\n]+" " ")
         (grpclient--trim-to-nil)))))
 
-(defconst grpclient-response-hook-regexp
-  "^\\(->\\) +\\(.*\\)$")
-
 
 (defun grpclient--define-hook (cmax)
   (save-excursion
@@ -170,6 +190,7 @@
       (string-join (grpclient--non-nil cmd-builder) " "))))
 
 
+;;;###autoload
 (defun grpclient-pretty-current ()
   "Pretty print body of current grpclient entity."
   (interactive)
@@ -184,6 +205,7 @@
         t))))
 
 
+;;;###autoload
 (defun grpclient-collaps-current ()
   "Collaps body of current grpclient entity."
   (interactive)
@@ -198,6 +220,7 @@
           t)))))
 
 
+;;;###autoload
 (defun grpclient-toggle-pretty-body ()
   "Pretty print body if it minimalized or conversely."
   (interactive)
@@ -205,6 +228,7 @@
       (grpclient-collaps-current)))
 
 
+;;;###autoload
 (defun grpclient-copy-grpcurl-to-clipboard ()
   "Build command and copy them into clipboard."
   (interactive)
@@ -212,7 +236,7 @@
     (kill-new cmd)
     (message cmd)))
 
-
+;;;###autoload
 (defun grpclient-send-current ()
   "Prepare grpcurl command and execute it asynchronously.
 
@@ -262,6 +286,7 @@ To exactly ensure what command is built call method
 (defvar grpclient--last-url nil)
 
 
+;;;###autoload
 (defun grpclient-describe ()
   "Describe things."
   (interactive)

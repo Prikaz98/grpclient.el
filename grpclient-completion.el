@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026  Miloš Tepić
 
 ;; Author: Miloš Tepić <tepcmils@gmail.com>
-;; Version: 0.1
+;; Version: 0.1.0
 ;; Keywords: grpc tools
 
 ;; This is free and unencumbered software released into the public domain.
