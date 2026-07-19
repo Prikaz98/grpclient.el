@@ -381,4 +381,5 @@ Interactively, use the server from the current buffer header."
 
 
 (provide 'grpclient-completion)
+
 ;;; grpclient-completion.el ends here

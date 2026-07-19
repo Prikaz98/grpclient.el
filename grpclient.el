@@ -300,8 +300,5 @@ To exactly ensure what command is built call method
 
 
 (provide 'grpclient)
-;;; grpclient.el  ends here
-
-(provide 'grpclient)
 
 ;;; grpclient.el ends here
