@@ -1,8 +1,11 @@
 ;;; grpclient-completion.el --- Completion for grpclient-mode using gRPC reflection  -*- lexical-binding: t; -*-
 
+;; Homepage: https://github.com/Prikaz98/grpclient.el
 ;; Author: Miloš Tepić <tepcmils@gmail.com>
 ;; Version: 0.1.0
 ;; Keywords: grpc tools
+
+;; Package-Requires: ((emacs "29.1"))
 
 ;; Copyright (C) 2026  Miloš Tepić
 
@@ -23,7 +26,7 @@
 
 ;;; Commentary:
 
-;; Provides ~grpclient-complete~ for ~grpclient-mode~: an interactive
+;; Provides ~grpclient-completion-complete~ for ~grpclient-mode~: an interactive
 ;; command that prompts for a gRPC method (with completion via
 ;; `completing-read') and inserts a fully-formed request with JSON
 ;; body template and end-comment marker.
@@ -36,7 +39,7 @@
 ;; All data is cached to disk (~/.emacs.d/.cache/grpcurl-autocomplete/).
 ;;
 ;; Usage:
-;;   C-c C-c  or  M-x grpclient-complete
+;;   C-c C-c  or  M-x grpclient-completion-complete
 ;;
 
 ;;; Code:
@@ -73,7 +76,7 @@ consult, icomplete, selectrum, etc.)."
 
 ;; --- Customization end -----------------------------------------------
 
-(defun grpclient--completing-read (prompt collection &optional predicate require-match
+(defun grpclient-completion--read (prompt collection &optional predicate require-match
                                             initial-input hist def inherit-input-method)
   "Read a choice from COLLECTION using `grpclient-completion-system'.
 
@@ -113,17 +116,17 @@ PROMPT and remaining arguments match `completing-read'."
 
 ;; --- Disk cache I/O --------------------------------------------------
 
-(defun grpclient--completion-cache-file-path (server)
+(defun grpclient-completion--cache-file-path (server)
   "Return absolute cache file path for SERVER."
   (let ((safe (replace-regexp-in-string "[^a-zA-Z0-9._:-]" "_" server)))
     (expand-file-name (concat safe ".cache") grpclient-completion-cache-dir)))
 
 
-(defun grpclient--completion-read-disk-cache (server)
+(defun grpclient-completion--read-disk-cache (server)
   "Read cached reflection data for SERVER from disk.
 
 Return nil if file is missing, stale, or corrupted."
-  (let ((file (grpclient--completion-cache-file-path server)))
+  (let ((file (grpclient-completion--cache-file-path server)))
     (when (file-exists-p file)
       (with-temp-buffer
         (insert-file-contents file)
@@ -144,11 +147,11 @@ Return nil if file is missing, stale, or corrupted."
            nil))))))
 
 
-(defun grpclient--completion-write-disk-cache (server data)
+(defun grpclient-completion--write-disk-cache (server data)
   "Write reflection DATA for SERVER to disk.
 
 If there is not method data function does nothing."
-  (let ((file (grpclient--completion-cache-file-path server))
+  (let ((file (grpclient-completion--cache-file-path server))
         (methods (alist-get "methods" data nil nil #'equal)))
     (when (and methods (append methods nil))
       (make-directory (file-name-directory file) t)
@@ -159,7 +162,7 @@ If there is not method data function does nothing."
 ;; --- grpcurl interaction ---------------------------------------------
 
 
-(defun grpclient--completion-flags ()
+(defun grpclient-completion--flags ()
   "Return combined flags for grpcurl commands (default + per-file)."
   (save-excursion
     (let* ((default (string-join grpclient-default-flags " "))
@@ -167,9 +170,9 @@ If there is not method data function does nothing."
       (string-join (grpclient--non-nil (list default per-file)) " "))))
 
 
-(defun grpclient--completion-run (fmt &rest args)
+(defun grpclient-completion--run (fmt &rest args)
   "Run grpcurl with formatted, using FMT, ARGS, return non-empty output lines."
-  (let* ((flags (grpclient--completion-flags))
+  (let* ((flags (grpclient-completion--flags))
          (cmd (format "grpcurl %s %s" flags (apply #'format fmt args))))
     (with-temp-buffer
       (let ((exit (call-process shell-file-name nil t nil
@@ -179,12 +182,12 @@ If there is not method data function does nothing."
         (split-string (buffer-string) "\n" t)))))
 
 
-(defun grpclient--completion-fetch-services (server)
+(defun grpclient-completion--fetch-services (server)
   "Fetch list of fully-qualified service names from SERVER."
-  (grpclient--completion-run "%s list" server))
+  (grpclient-completion--run "%s list" server))
 
 
-(defun grpclient--completion-proto-to-json (proto-name)
+(defun grpclient-completion--proto-to-json (proto-name)
   "Convert protobuf snake_case field as PROTO-NAME to JSON camelCase.
 \"legal_type\" → \"legalType\", \"selection_start\" → \"selectionStart\"."
   (let ((parts (split-string proto-name "_" t)))
@@ -195,7 +198,7 @@ If there is not method data function does nothing."
 ;; --- Data retrieval with caching -------------------------------------
 
 
-(defun grpclient--completion-fetch-all (server)
+(defun grpclient-completion--fetch-all (server)
   "Fetch all rpc methods, request types, and message templates from SERVER.
 
 Returns alist:
@@ -206,14 +209,14 @@ Returns alist:
 TEMPLATE is an alist of (FIELD . DEFAULT) from -msg-template output.
 TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
   (message "Fetching reflection data from %s..." server)
-  (let* ((services (grpclient--completion-fetch-services server))
+  (let* ((services (grpclient-completion--fetch-services server))
          (rpc-infos nil)         ; list of (method-key . request-type)
          (request-types nil)     ; list of unique request-type strings
          (methods nil))
 
     ;; Phase 1: describe each service and extract rpc method + request type
     (dolist (svc services)
-      (let* ((lines (grpclient--completion-run "%s describe %s" server svc))
+      (let* ((lines (grpclient-completion--run "%s describe %s" server svc))
              (text (and lines (string-join lines "\n"))))
         (when text
           (let ((pos 0))
@@ -230,7 +233,7 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
     (let ((templates (make-hash-table :test 'equal))
           (types-map (make-hash-table :test 'equal)))
       (dolist (req-type request-types)
-        (let* ((lines (grpclient--completion-run "-msg-template %s describe %s"
+        (let* ((lines (grpclient-completion--run "-msg-template %s describe %s"
                                                      server req-type))
                (text (and lines (string-join lines "\n")))
                (json-start (when text
@@ -254,7 +257,7 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
                               (let* ((repeated (match-string 1 line))
                                      (ptype (match-string 2 line))
                                      (pname (match-string 3 line))
-                                     (jname (grpclient--completion-proto-to-json pname))
+                                     (jname (grpclient-completion--proto-to-json pname))
                                      (type-str (if repeated
                                                    (concat "repeated " ptype)
                                                  ptype)))
@@ -277,18 +280,18 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
       ("methods" . ,(vconcat (nreverse methods)))))))
 
 
-(defun grpclient--completion-get-data (server)
+(defun grpclient-completion--get-data (server)
   "Return reflection data for SERVER from disk or network."
-  (or (grpclient--completion-read-disk-cache server)
-      (let ((fresh (grpclient--completion-fetch-all server)))
-        (grpclient--completion-write-disk-cache server fresh)
+  (or (grpclient-completion--read-disk-cache server)
+      (let ((fresh (grpclient-completion--fetch-all server)))
+        (grpclient-completion--write-disk-cache server fresh)
         fresh)))
 
 
 ;; --- Body and end-comment insertion ----------------------------------
 
 
-(defun grpclient--completion-format-value (val)
+(defun grpclient-completion--format-value (val)
   "Format template value VAL as a JSON literal for body insertion."
   (cond ((stringp val) (format "\"%s\"" val))
         ((numberp val) (number-to-string val))
@@ -296,11 +299,11 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
         ((eq val :json-false) "false")
         ((eq val t) "true")
         ((vectorp val) (format "[%s]"
-                               (string-join (mapcar #'grpclient--completion-format-value val) ",")))
+                               (string-join (mapcar #'grpclient-completion--format-value val) ",")))
         ((listp val)
          (let ((parts (mapcar (lambda (p)
                                 (format "\"%s\":%s" (car p)
-                                        (grpclient--completion-format-value (cdr p))))
+                                        (grpclient-completion--format-value (cdr p))))
                               val)))
            (format "{%s}" (string-join parts ","))))
         (t (progn
@@ -308,7 +311,7 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
              (format "%s" (prin1-to-string val))))))
 
 
-(defun grpclient--completion-insert-complete (server method-key template)
+(defun grpclient-completion--insert-complete (server method-key template)
   "After completing METHOD-KEY, insert body template.
 SERVER is used for variable resolution; TEMPLATE is an alist."
   (let* ((short-name (and (string-match "/\\([^/]+\\)$" method-key)
@@ -318,7 +321,7 @@ SERVER is used for variable resolution; TEMPLATE is an alist."
                                (let* ((key (car p))
                                       (val (cdr p))
                                       (base (format "\"%s\":%s" key
-                                                    (grpclient--completion-format-value val))))
+                                                    (grpclient-completion--format-value val))))
                                  base))
                              template)))
          (body (if pairs
@@ -330,10 +333,10 @@ SERVER is used for variable resolution; TEMPLATE is an alist."
 
 
 ;;;###autoload
-(defun grpclient-complete (&optional server insert-all)
+(defun grpclient-completion-complete (&optional server insert-all)
   "Insert a complete gRPC request at point.
 
-Prompts for a Service/Method using `grpclient--completing-read'
+Prompts for a Service/Method using `grpclient-completion--read'
 \(respects `grpclient-completion-system': auto-detects helm, ivy,
 ido, or falls back to plain `completing-read').
 
@@ -347,12 +350,12 @@ Inserts:
   (interactive)
   (save-excursion
     (let* ((server (or server (read-string "gRPC server address: ")))
-           (data (grpclient--completion-get-data server))
+           (data (grpclient-completion--get-data server))
            (methods (alist-get "methods" data nil nil #'equal))
            (method-names (mapcar (lambda (e) (aref e 0)) methods))
            (keys (if insert-all
                      (append method-names nil)
-                   (list (grpclient--completing-read "Method: " method-names nil t)))))
+                   (list (grpclient-completion--read "Method: " method-names nil t)))))
       (dolist (method-key keys)
         (let ((entry (cl-find method-key methods
                               :key (lambda (e) (aref e 0))
@@ -363,20 +366,20 @@ Inserts:
                                     (match-string 1 method-key))))
               (insert (format "# Call %s\n" short-name))
               (insert (format "GRPC %s %s" server method-key))
-              (grpclient--completion-insert-complete server method-key template))))))))
+              (grpclient-completion--insert-complete server method-key template))))))))
 
 
 ;;;###autoload
-(defun grpclient-refresh-cache (&optional server)
+(defun grpclient-completion-refresh-cache (&optional server)
   "Force-refetch reflection data for SERVER.
 Interactively, use the server from the current buffer header."
   (interactive)
   (unless server
     (setq server (read-string "gRPC server address: ")))
-  (let ((file (grpclient--completion-cache-file-path server)))
+  (let ((file (grpclient-completion--cache-file-path server)))
     (when (file-exists-p file)
       (delete-file file)))
-  (grpclient--completion-get-data server)
+  (grpclient-completion--get-data server)
   (message "Reflection cache refreshed for %s" server))
 
 

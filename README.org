@@ -19,7 +19,7 @@
 Insert complete gRPC requests using server reflection.  Uses
 standard ~completing-read~ (works with consult, vertico, icomplete, fido, ido, helm, ivy).
 
-Call ~grpclient-complete~ (~C-c C-c~ in ~grpclient-mode~) or ~M-x~.
+Call ~grpclient-completion-complete~ (~C-c C-c~ in ~grpclient-mode~) or ~M-x~.
 It prompts for a server address and method name, then inserts:
 #+begin_example
 # Call SayHello
@@ -27,10 +27,10 @@ GRPC grpcb.in:9000 hello.HelloService/SayHello
 {<message template>}
 #+end_example
 
-| Command                    | Binding          | Description                      |
-|----------------------------+------------------+----------------------------------|
-| ~grpclient-complete~       | ~C-c C-c~        | Insert gRPC request at point     |
-| ~grpclient-refresh-cache~  | ~M-x <cmd>~      | Force-refetch reflection data    |
+| Command                              | Binding     | Description                   |
+|--------------------------------------+-------------+-------------------------------|
+| ~grpclient-completion-complete~      | ~C-c C-c~   | Insert gRPC request at point  |
+| ~grpclient-completion-refresh-cache~ | ~M-x <cmd>~ | Force-refetch reflection data |
 * Running the Example gRPC Server
 To test the Emacs mode, you can start a local Python gRPC server serving both Proto2 and Proto3 examples.
 
@@ -48,7 +48,7 @@ The server will start on port =9000= with gRPC reflection enabled, making it eas
 | C-c C-v | grpclient-send-current              |
 | C-c C-u | grpclient-copy-grpcurl-to-clipboard |
 | C-c C-l | grpclient-describe                  |
-| C-c C-c | grpclient-complete                  |
+| C-c C-c | grpclient-completion-complete       |
 | <tab>   | grpclient-toggle-pretty-body        |
 
 * Screenshot

@@ -1,4 +1,6 @@
-;;; grpclient.el --- grpcurl interactive builder -*- lexical-binding: t; -*-
+;;; grpclient.el --- Grpcurl interactive builder -*- lexical-binding: t; -*-
+
+;; Homepage: https://github.com/Prikaz98/grpclient.el
 
 ;; Author: Ivan Prikaznov <prikaznov555@gmail.com>
 ;;    Miloš Tepić <tepcmils@gmail.com>
@@ -7,6 +9,8 @@
 ;; Created: 14 Mar 2025
 ;; Keywords: grpc grpcurl tools
 ;; Version: 0.1.0
+
+;; Package-Requires: ((emacs "29.1"))
 
 ;; Copyright (C) 2026 Ivan Prikaznov
 
@@ -34,10 +38,7 @@
 ;;; Code:
 
 (require 'json)
-(eval-when-compile
-  (if (version< emacs-version "26")
-      (require 'cl)
-    (require 'cl-lib)))
+(require 'cl-lib)
 (require 'grpclient-mode)
 (require 'grpclient-completion)
 

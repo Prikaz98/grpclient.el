@@ -1,10 +1,16 @@
-;;; grpclient-mode.el --- Description -*- lexical-binding: t; -*-
+;;; grpclient-mode.el --- Grpcurl interactive builder -*- lexical-binding: t; -*-
+
+;; Homepage: https://github.com/Prikaz98/grpclient.el
 
 ;; Author: Ivan Prikaznov <prikaznov555@gmail.com>
+;;    Miloš Tepić <tepcmils@gmail.com>
 ;; Maintainer: Ivan Prikaznov <prikaznov555@gmail.com>
+;;    Miloš Tepić <tepcmils@gmail.com>
 ;; Created: 14 Mar 2025
 ;; Keywords: grpc grpcurl tools
 ;; Version: 0.1.0
+
+;; Package-Requires: ((emacs "29.1"))
 
 ;; Copyright (C) 2026 Ivan Prikaznov
 
@@ -33,13 +39,12 @@
 
 (defvar grpclient-mode-hook nil)
 
-
 (defvar grpclient-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-v") #'grpclient-send-current)
     (define-key map (kbd "C-c C-u") #'grpclient-copy-grpcurl-to-clipboard)
     (define-key map (kbd "C-c C-l") #'grpclient-describe)
-    (define-key map (kbd "C-c C-c") #'grpclient-complete)
+    (define-key map (kbd "C-c C-c") #'grpclient-completion-complete)
     (define-key map (kbd "<tab>") #'grpclient-toggle-pretty-body)
     map)
   "Keymap of grpclient major mode.")
@@ -110,4 +115,4 @@
 
 (provide 'grpclient-mode)
 
-;;grpclient-mode.el ends here
+;;; grpclient-mode.el ends here
