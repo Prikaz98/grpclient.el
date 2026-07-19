@@ -53,25 +53,25 @@
 
 (defface grpclient-url-face
   '((t (:inherit font-lock-function-name-face)))
-  "Face for variable value (Emacs lisp)."
+  "Face for variable value (Emacs Lisp)."
   :group 'grpclient-faces)
 
 
 (defface grpclient-proto-face
   '((t (:inherit font-lock-type-face)))
-  "Face for variable value (Emacs lisp)."
+  "Face for variable value (Emacs Lisp)."
   :group 'grpclient-faces)
 
 
 (defface grpclient-var-name-face
   '((t (:inherit font-lock-keyword-face)))
-  "Face for variable value (Emacs lisp)."
+  "Face for variable value (Emacs Lisp)."
   :group 'grpclient-faces)
 
 
 (defface grpclient-var-value-face
   '((t (:inherit font-lock-string-face)))
-  "Face for variable value (Emacs lisp)."
+  "Face for variable value (Emacs Lisp)."
   :group 'grpclient-faces)
 
 
@@ -112,3 +112,7 @@
 (provide 'grpclient-mode)
 
 ;;grpclient-mode.el ends here
+
+(provide 'grpclient-mode)
+
+;;; grpclient-mode.el ends here

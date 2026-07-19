@@ -168,14 +168,14 @@ If there is not method data function does nothing."
 
 
 (defun grpclient--completion-run (fmt &rest args)
-  "Run grpcurl with formatted ARGS, return non-empty output lines."
+  "Run grpcurl with formatted, using FMT, ARGS, return non-empty output lines."
   (let* ((flags (grpclient--completion-flags))
          (cmd (format "grpcurl %s %s" flags (apply #'format fmt args))))
     (with-temp-buffer
       (let ((exit (call-process shell-file-name nil t nil
                                 shell-command-switch cmd)))
         (unless (zerop exit)
-          (error "grpcurl failed (exit %d): %s" exit cmd))
+          (error "Grpcurl failed (exit %d): %s" exit cmd))
         (split-string (buffer-string) "\n" t)))))
 
 
@@ -185,7 +185,7 @@ If there is not method data function does nothing."
 
 
 (defun grpclient--completion-proto-to-json (proto-name)
-  "Convert protobuf snake_case field name to JSON camelCase.
+  "Convert protobuf snake_case field as PROTO-NAME to JSON camelCase.
 \"legal_type\" → \"legalType\", \"selection_start\" → \"selectionStart\"."
   (let ((parts (split-string proto-name "_" t)))
     (concat (car parts)
@@ -334,7 +334,7 @@ SERVER is used for variable resolution; TEMPLATE is an alist."
   "Insert a complete gRPC request at point.
 
 Prompts for a Service/Method using `grpclient--completing-read'
-(respects `grpclient-completion-system': auto-detects helm, ivy,
+\(respects `grpclient-completion-system': auto-detects helm, ivy,
 ido, or falls back to plain `completing-read').
 
 INSERT-ALL boolean is used to force insertion of all available
@@ -342,7 +342,7 @@ methods.
 
 Inserts:
   # Call <Method>
-  GRPC <server> <Service>/<Method>
+  GRPC <SERVER> <Service>/<Method>
   {<message template>}\n\n"
   (interactive)
   (save-excursion

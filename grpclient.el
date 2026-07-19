@@ -52,11 +52,11 @@
 (defconst grpclient-empty-line-regexp "^\\s-*$")
 (defconst grpclient-response-hook-regexp "^\\(->\\) +\\(.*\\)$")
 
-(defvar grpclient-override-vars nil "Key Value pair list that override vars while building a query")
+(defvar grpclient-override-vars nil "Key Value pair list that override vars while building a query.")
 
 
 (defun grpclient-set-var (key value)
-  "Set Value under the Key in grpclient-override-vars varaible."
+  "Set VALUE under the KEY in `grpclient-override-vars' varaible."
   (setq grpclient-override-vars
         (cons
          (cons key value)
@@ -73,7 +73,7 @@
 
 
 (defun grpclient--replace-vars-with-override (vars)
-  "Replace defined in file vars with `grpclient-override-vars` variable."
+  "Replace defined in file VARS with `grpclient-override-vars` variable."
   (let* ((keys-to-override (mapcar #'car grpclient-override-vars)))
     (dolist (key keys-to-override)
       (setq vars (assoc-delete-all key vars)))
@@ -86,12 +86,13 @@
 
 
 (defun grpclient--trim-to-nil (str)
-  "If trimmed string is empty return nil else trimmed string"
+  "If trimmed STR is empty return nil else trimmed string."
   (let ((trimmed (string-trim str)))
     (unless (string-empty-p trimmed) trimmed)))
 
 
 (defun grpclient--current-min ()
+  "Return min point of current request entity."
   (save-excursion
     (beginning-of-line)
     (if (looking-at grpclient-comment-start-regexp)
@@ -103,6 +104,7 @@
 
 
 (defun grpclient--current-max ()
+  "Return min point of current request entity."
   (save-excursion
     (if (re-search-forward grpclient-comment-start-regexp (point-max) t)
         (max (- (point-at-bol) 1) 1)
@@ -111,12 +113,14 @@
 
 
 (defun grpclient--current-line ()
+  "Return current line."
   (buffer-substring-no-properties
    (progn (beginning-of-line) (point))
    (progn (end-of-line) (point))))
 
 
 (defun grpclient--collect-vars-before ()
+  "Return list of vars defined before the current query."
   (save-excursion
     (let ((vars nil)
           (bound (point))
@@ -132,6 +136,7 @@
 
 
 (defun grpclient--find-flags (bound)
+  "Return list of flags defined in a file in BOUND."
   (save-excursion
     (goto-char (point-min))
     (when (search-forward-regexp grpclient-flags-block-start-regexp bound t)
@@ -148,12 +153,14 @@
 
 
 (defun grpclient--define-hook (cmax)
+  "Return elisp hook in current query entity until CMAX point."
   (save-excursion
     (when (search-forward-regexp grpclient-response-hook-regexp cmax t)
       (match-string-no-properties 2))))
 
 
 (defun grpclient--build-command ()
+  "Build and command string by current query entity."
   (save-excursion
     (goto-char (grpclient--current-min))
     (let* ((url-proto-method (cdr (string-split (grpclient--current-line) " ")))
@@ -294,3 +301,7 @@ To exactly ensure what command is built call method
 
 (provide 'grpclient)
 ;;; grpclient.el  ends here
+
+(provide 'grpclient)
+
+;;; grpclient.el ends here
