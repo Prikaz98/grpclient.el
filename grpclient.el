@@ -41,7 +41,7 @@
 
 (defcustom grpclient-default-flags '("-plaintext")
   "Default flags that append in every query."
-  :type 'list
+  :type '(repeat string)
   :group 'grpclient)
 
 (defconst grpclient-flags-block-start-regexp "^:flags=<<")
