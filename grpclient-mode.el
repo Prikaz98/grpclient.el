@@ -96,7 +96,6 @@
     table))
 
 
-;;TODO: fix, it is not working now
 ;;;###autoload
 (define-derived-mode grpclient-mode fundamental-mode "GRPClient"
   "Major mode for editing grpc buffer."
