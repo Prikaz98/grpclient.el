@@ -1,11 +1,9 @@
 ;;; grpclient.el --- grpcurl interactive builder -*- lexical-binding: t; -*-
 
-;; Authors:
-;;   Ivan Prikaznov <prikaznov555@gmail.com>
-;;   Miloš Tepić <tepcmils@gmail.com>
-;; Maintainers:
-;;   Ivan Prikaznov <prikaznov555@gmail.com>
-;;   Miloš Tepić <tepcmils@gmail.com>
+;; Author: Ivan Prikaznov <prikaznov555@gmail.com>
+;;    Miloš Tepić <tepcmils@gmail.com>
+;; Maintainer: Ivan Prikaznov <prikaznov555@gmail.com>
+;;    Miloš Tepić <tepcmils@gmail.com>
 ;; Created: 14 Mar 2025
 ;; Keywords: grpc grpcurl tools
 ;; Version: 0.1.0
