@@ -111,7 +111,3 @@
 (provide 'grpclient-mode)
 
 ;;grpclient-mode.el ends here
-
-(provide 'grpclient-mode)
-
-;;; grpclient-mode.el ends here
