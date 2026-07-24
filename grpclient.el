@@ -96,7 +96,7 @@ consult, icomplete, selectrum, etc.)."
 (defun grpclient--replace-all (replacements s)
   "REPLACEMENTS is a list of cons-cells.  Each `car` is replaced with `cdr` in S."
   (let ((case-fold-search nil))
-   (replace-regexp-in-string (regexp-opt (mapcar 'car replacements))
+   (replace-regexp-in-string (regexp-opt (mapcar #'car replacements))
                              (lambda (it) (cdr (assoc-string it replacements)))
                              s t t)))
 
@@ -111,7 +111,7 @@ consult, icomplete, selectrum, etc.)."
 
 (defun grpclient--non-nil (list)
   "Return a copy of LIST with all nil items removed."
-  (seq-filter 'identity list))
+  (seq-filter #'identity list))
 
 
 (defun grpclient--trim-to-nil (str)
@@ -141,11 +141,13 @@ consult, icomplete, selectrum, etc.)."
              (if (looking-at "^$") (- (point) 1) (point))))))
 
 
-(defun grpclient--current-line ()
-  "Return current line."
-  (buffer-substring-no-properties
-   (progn (beginning-of-line) (point))
-   (progn (end-of-line) (point))))
+(defun grpclient--current-line-goto-eol ()
+  "Return current line and go to end of the line."
+  (let ((str (buffer-substring-no-properties
+              (line-beginning-position)
+              (line-end-position))))
+    (end-of-line)
+    str))
 
 
 (defun grpclient--collect-vars-before ()
@@ -157,7 +159,7 @@ consult, icomplete, selectrum, etc.)."
       (goto-char (point-min))
       (while (search-forward-regexp "^:.+=" bound t)
         (setq sexp? (looking-at "\(.+\)$"))
-        (cl-destructuring-bind (key value) (split-string (grpclient--current-line) "=")
+        (cl-destructuring-bind (key value) (split-string (grpclient--current-line-goto-eol) "=")
           (when sexp?
               (setq value (eval-expression (read value))))
           (setq vars (cons (cons key value) vars))))
@@ -192,7 +194,7 @@ consult, icomplete, selectrum, etc.)."
   "Build and command string by current query entity."
   (save-excursion
     (goto-char (grpclient--current-min))
-    (let* ((url-proto-method (cdr (string-split (grpclient--current-line) " ")))
+    (let* ((url-proto-method (cdr (string-split (grpclient--current-line-goto-eol) " ")))
            (url (cl-first url-proto-method))
            (vars (grpclient--replace-vars-with-override (grpclient--collect-vars-before)))
            (method (cl-second url-proto-method))
@@ -596,7 +598,7 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
 
     (message "Fetching reflection data from %s... done" server)
     `(("server" . ,server)
-      ("fetched-at" . ,(format-time-string "%Y-%m-%dT%TZ" nil t))
+      ("fetched-at" . ,(format-time-string "%FT%TZ" nil t))
       ("methods" . ,(vconcat (nreverse methods)))))))
 
 

@@ -37,3 +37,8 @@ GRPC grpcb.in:9000 grpcbin.GRPCBin.DummyServerStream
 #Concatenates two strings (max size: 10 chars)
 GRPC grpcb.in:9000 addsvc.Add.Concat
 {"a":"Hello","b":":auth"}
+
+# Call SayMultiType
+GRPC localhost:9000 hello_v3.HelloServiceV3/SayMultiType
+{"fString":"","fInt32":0,"fBool":false}
+
