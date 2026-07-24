@@ -32,16 +32,13 @@
 ;;; Commentary:
 
 ;; This is tool to manually explore and test GRPC Services based on
-;; https://github.com/fullstorydev/grpcurl project. Runs queries for a
+;; https://github.com/fullstorydev/grpcurl project.  Runs queries for a
 ;; plain-text query sheet, displays results in separated buffer.
 
 ;;; Code:
 
 (require 'json)
 (require 'cl-lib)
-(require 'grpclient-mode)
-(require 'grpclient-completion)
-
 
 (defcustom grpclient-default-flags '("-plaintext")
   "Default flags that append in every query."
@@ -97,7 +94,7 @@ consult, icomplete, selectrum, etc.)."
 
 ;;stolen from 's beautiful library https://github.com/magnars/s.el
 (defun grpclient--replace-all (replacements s)
-  "REPLACEMENTS is a list of cons-cells. Each `car` is replaced with `cdr` in S."
+  "REPLACEMENTS is a list of cons-cells.  Each `car` is replaced with `cdr` in S."
   (let ((case-fold-search nil))
    (replace-regexp-in-string (regexp-opt (mapcar 'car replacements))
                              (lambda (it) (cdr (assoc-string it replacements)))
@@ -129,9 +126,9 @@ consult, icomplete, selectrum, etc.)."
     (beginning-of-line)
     (if (looking-at grpclient-comment-start-regexp)
         (if (re-search-forward grpclient-comment-not-regexp (point-max) t)
-            (point-at-bol) (point-max))
+            (pos-bol) (point-max))
       (if (re-search-backward grpclient-comment-start-regexp (point-min) t)
-          (point-at-bol 2)
+          (pos-bol 2)
         (point-min)))))
 
 
@@ -139,7 +136,7 @@ consult, icomplete, selectrum, etc.)."
   "Return min point of current request entity."
   (save-excursion
     (if (re-search-forward grpclient-comment-start-regexp (point-max) t)
-        (max (- (point-at-bol) 1) 1)
+        (max (- (pos-bol) 1) 1)
       (progn (goto-char (point-max))
              (if (looking-at "^$") (- (point) 1) (point))))))
 
@@ -205,7 +202,7 @@ consult, icomplete, selectrum, etc.)."
            (body (progn
                    (forward-char)
                    (when (looking-at grpclient-response-hook-regexp)
-                     (next-line))
+                     (forward-line))
                    (string-trim (buffer-substring-no-properties (min (point) cmax) cmax))))
            (cmd-builder (list "grpcurl"
                               (when body (concat "-d '" (encode-coding-string (grpclient--replace-all vars body) 'utf-8) "'"))
@@ -426,18 +423,16 @@ PROMPT and remaining arguments match `completing-read'."
        (ido-completing-read prompt collection predicate require-match
                             initial-input hist def inherit-input-method))
       ('helm
-       (if (require 'helm nil 'noerror)
+       (if (fboundp 'helm-comp-read)
            (helm-comp-read prompt collection
                            :must-match require-match
                            :initial-input initial-input)
-         (completing-read prompt collection predicate require-match
-                          initial-input hist def inherit-input-method)))
+         (user-error "Please install helm")))
       ('ivy
-       (if (require 'ivy nil 'noerror)
+       (if (fboundp 'ivy-completing-read)
            (ivy-completing-read prompt collection predicate require-match
                                 initial-input hist def inherit-input-method)
-         (completing-read prompt collection predicate require-match
-                          initial-input hist def inherit-input-method)))
+         (user-error "Please install ivy")))
       ((pred functionp)
        (funcall system prompt collection predicate require-match
                 initial-input hist def inherit-input-method))
@@ -633,12 +628,9 @@ TYPES is an alist of (JSON-FIELD . PROTO-TYPE-STRING) when available."
              (format "%s" (prin1-to-string val))))))
 
 
-(defun grpclient-completion--insert-complete (server method-key template)
-  "After completing METHOD-KEY, insert body template.
-SERVER is used for variable resolution; TEMPLATE is an alist."
-  (let* ((short-name (and (string-match "/\\([^/]+\\)$" method-key)
-                          (match-string 1 method-key)))
-         (pairs (and template
+(defun grpclient-completion--insert-complete (template)
+  "Insert body template.  TEMPLATE is an alist."
+  (let* ((pairs (and template
                      (mapcar (lambda (p)
                                (let* ((key (car p))
                                       (val (cdr p))
@@ -686,7 +678,7 @@ Inserts:
                                     (match-string 1 method-key))))
               (insert (format "# Call %s\n" short-name))
               (insert (format "GRPC %s %s" server method-key))
-              (grpclient-completion--insert-complete server method-key template))))))))
+              (grpclient-completion--insert-complete template))))))))
 
 
 ;;;###autoload
